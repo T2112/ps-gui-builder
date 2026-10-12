@@ -1,0 +1,175 @@
+{
+  "version": "0.1",
+  "description": "Command tree for PowerShell GUI builder. Expand with real categories and cmdlets. All development personal time/equipment.",
+  "categories": {
+    "Edit Exchange Settings": {
+      "description": "Manage Exchange Online or on-premises mailbox and folder permissions",
+      "options": {
+        "On Exchange Online": {
+          "options": {
+            "Add Mailbox Folder Permission": {
+              "cmdlet": "Add-MailboxFolderPermission",
+              "module": "ExchangeOnlineManagement",
+              "requiresAdmin": true,
+              "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
+              "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder}",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "label": "owner user",
+                  "type": "string",
+                  "placeholder": "owner@yourdomain.com",
+                  "required": true
+                },
+                {
+                  "name": "folder",
+                  "label": "folder",
+                  "type": "choice",
+                  "choices": ["Calendar", "Inbox", "Contacts", "Tasks", "Notes"],
+                  "default": "Calendar",
+                  "required": true
+                },
+                {
+                  "name": "delegate",
+                  "label": "delegate user",
+                  "type": "string",
+                  "placeholder": "delegate@yourdomain.com",
+                  "required": true
+                },
+                {
+                  "name": "rights",
+                  "label": "permission level",
+                  "type": "choice",
+                  "choices": ["Owner", "PublishingEditor", "Editor", "PublishingAuthor", "Author", "NonEditingAuthor", "Reviewer", "Contributor", "AvailabilityOnly", "LimitedDetails", "None"],
+                  "default": "Editor",
+                  "required": true
+                }
+              ]
+            },
+            "Remove Mailbox Folder Permission": {
+              "cmdlet": "Remove-MailboxFolderPermission",
+              "module": "ExchangeOnlineManagement",
+              "requiresAdmin": true,
+              "template": "Remove-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\"",
+              "sentence": "I want to remove {delegate}'s permissions from {owner}'s {folder}",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "label": "owner user",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "folder",
+                  "label": "folder",
+                  "type": "choice",
+                  "choices": ["Calendar", "Inbox", "Contacts", "Tasks"],
+                  "default": "Calendar",
+                  "required": true
+                },
+                {
+                  "name": "delegate",
+                  "label": "delegate user",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          }
+        },
+        "On a Network Server": {
+          "options": {
+            "Add Mailbox Folder Permission (On-Prem)": {
+              "cmdlet": "Add-MailboxFolderPermission",
+              "requiresAdmin": true,
+              "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
+              "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder} (on-prem)",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "label": "owner user",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "folder",
+                  "label": "folder",
+                  "type": "string",
+                  "default": "Calendar",
+                  "required": true
+                },
+                {
+                  "name": "delegate",
+                  "label": "delegate user",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "rights",
+                  "label": "permission level",
+                  "type": "choice",
+                  "choices": ["Editor", "Author", "Reviewer", "Owner"],
+                  "default": "Editor",
+                  "required": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Map a Network Drive": {
+      "description": "Map or remove network drives",
+      "options": {
+        "Map New Drive": {
+          "cmdlet": "New-PSDrive",
+          "requiresAdmin": false,
+          "template": "New-PSDrive -Name \"{driveLetter}\" -PSProvider FileSystem -Root \"{uncPath}\" -Persist",
+          "sentence": "I want to map drive {driveLetter}: to {uncPath}",
+          "parameters": [
+            {
+              "name": "driveLetter",
+              "label": "drive letter",
+              "type": "string",
+              "placeholder": "Z",
+              "required": true
+            },
+            {
+              "name": "uncPath",
+              "label": "UNC path",
+              "type": "string",
+              "placeholder": "\\\\server\\share",
+              "required": true
+            }
+          ]
+        }
+      }
+    },
+    "Manage Users and Groups": {
+      "description": "Active Directory or local user/group operations",
+      "options": {
+        "Add User to Group": {
+          "cmdlet": "Add-ADGroupMember",
+          "module": "ActiveDirectory",
+          "requiresAdmin": true,
+          "template": "Add-ADGroupMember -Identity \"{group}\" -Members \"{user}\"",
+          "sentence": "I want to add {user} to the {group} group",
+          "parameters": [
+            {
+              "name": "user",
+              "label": "user",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "group",
+              "label": "group",
+              "type": "string",
+              "required": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}
