@@ -1,0 +1,48 @@
+<!--
+  Personal project by Thomas Schueler.
+  Developed on personal time using personal equipment.
+  Not related to any employment.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>PsGuiBuilder</RootNamespace>
+    <AssemblyName>PsGuiBuilder</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Description>Personal PowerShell GUI Command Builder.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PsGuiBuilder.Core\PsGuiBuilder.Core.csproj" />
+    <ProjectReference Include="..\PsGuiBuilder.PowerShell\PsGuiBuilder.PowerShell.csproj" />
+    <ProjectReference Include="..\PsGuiBuilder.ElevatedHost\PsGuiBuilder.ElevatedHost.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.20" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\command-tree.json" Link="command-tree.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyElevatedHost" AfterTargets="Build">
+    <PropertyGroup>
+      <_HostOut>$(MSBuildThisFileDirectory)..\PsGuiBuilder.ElevatedHost\bin\$(Configuration)\net8.0\</_HostOut>
+    </PropertyGroup>
+    <Error Text="The elevated helper was not built at $(_HostOut)." Condition="!Exists('$(_HostOut)PsGuiBuilder.ElevatedHost.dll')" />
+    <ItemGroup>
+      <_HostFile Include="$(_HostOut)*.dll" />
+      <_HostFile Include="$(_HostOut)*.exe" />
+      <_HostFile Include="$(_HostOut)*.json" />
+      <_HostFile Include="$(_HostOut)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_HostFile)" DestinationFolder="$(TargetDir)elevated-host\" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

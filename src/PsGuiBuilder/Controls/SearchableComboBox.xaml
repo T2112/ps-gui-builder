@@ -1,0 +1,101 @@
+<UserControl x:Class="PsGuiBuilder.Controls.SearchableComboBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root"
+             Focusable="False"
+             MinWidth="240"
+             Margin="0,0,12,0">
+  <!--
+    Personal project by Thomas Schueler.
+    Developed on personal time using personal equipment.
+    Not related to any employment.
+  -->
+  <StackPanel>
+    <TextBlock Text="{Binding Label, ElementName=Root}"
+               FontSize="12"
+               FontWeight="SemiBold"
+               Foreground="#6F655C"
+               Margin="2,0,0,6" />
+    <Grid>
+      <TextBox x:Name="Input"
+               Text="{Binding Text, ElementName=Root, UpdateSourceTrigger=PropertyChanged}"
+               Padding="10,8"
+               FontSize="14"
+               Background="White"
+               BorderBrush="#E2D8C8"
+               BorderThickness="1"
+               GotKeyboardFocus="Input_GotKeyboardFocus"
+               PreviewLostKeyboardFocus="Input_PreviewLostKeyboardFocus"
+               PreviewKeyDown="Input_PreviewKeyDown" />
+      <TextBlock Text="Search"
+                 IsHitTestVisible="False"
+                 Margin="12,0,0,0"
+                 VerticalAlignment="Center"
+                 Foreground="#A8A29E">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Text, ElementName=Root}" Value="">
+                <Setter Property="Visibility" Value="Visible" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Text, ElementName=Root}" Value="{x:Null}">
+                <Setter Property="Visibility" Value="Visible" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+      <Popup x:Name="OptionsPopup"
+             PlacementTarget="{Binding ElementName=Input}"
+             Placement="Bottom"
+             StaysOpen="True"
+             AllowsTransparency="True"
+             PopupAnimation="None">
+        <Border Background="#FFFCF7"
+                BorderBrush="#9C4221"
+                BorderThickness="1"
+                Margin="0,4,0,0"
+                MinWidth="240">
+          <DockPanel>
+            <TextBlock x:Name="EmptyHint"
+                       Text="No matches"
+                       DockPanel.Dock="Top"
+                       Margin="10,8"
+                       Foreground="#6F655C"
+                       Visibility="Collapsed" />
+            <ListBox x:Name="List"
+                     MaxHeight="280"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     PreviewMouseLeftButtonDown="List_PreviewMouseLeftButtonDown">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Margin="2,1">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Description}"
+                               FontSize="12"
+                               Foreground="#6F655C"
+                               TextWrapping="Wrap">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Visible" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasDescription}" Value="False">
+                              <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+      </Popup>
+    </Grid>
+  </StackPanel>
+</UserControl>

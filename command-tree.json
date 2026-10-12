@@ -1,6 +1,6 @@
 {
   "version": "0.1",
-  "description": "Command tree for PowerShell GUI builder. Expand with real categories and cmdlets. All development personal time/equipment.",
+  "description": "Command tree for PowerShell GUI builder. Expand with real categories and cmdlets. Parameter types include string, choice, switch, bool, int, number, securestring, and array. All development personal time/equipment.",
   "categories": {
     "Edit Exchange Settings": {
       "description": "Manage Exchange Online or on-premises mailbox and folder permissions",
@@ -11,6 +11,13 @@
               "cmdlet": "Add-MailboxFolderPermission",
               "module": "ExchangeOnlineManagement",
               "requiresAdmin": true,
+              "shell": "pwsh",
+              "signIn": {
+                "service": "Exchange Online",
+                "mode": "interactive",
+                "prompt": "Sign in to Exchange Online. A browser window will open.",
+                "command": "Connect-ExchangeOnline -ShowBanner:$false"
+              },
               "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
               "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder}",
               "parameters": [
@@ -50,6 +57,12 @@
               "cmdlet": "Remove-MailboxFolderPermission",
               "module": "ExchangeOnlineManagement",
               "requiresAdmin": true,
+              "signIn": {
+                "service": "Exchange Online",
+                "mode": "interactive",
+                "prompt": "Sign in to Exchange Online. A browser window will open.",
+                "command": "Connect-ExchangeOnline -ShowBanner:$false"
+              },
               "template": "Remove-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\"",
               "sentence": "I want to remove {delegate}'s permissions from {owner}'s {folder}",
               "parameters": [
@@ -82,6 +95,13 @@
             "Add Mailbox Folder Permission (On-Prem)": {
               "cmdlet": "Add-MailboxFolderPermission",
               "requiresAdmin": true,
+              "shell": "windows-powershell",
+              "signIn": {
+                "service": "Exchange on-premises",
+                "mode": "interactive",
+                "prompt": "This command runs in Windows PowerShell 5.1 and loads the on-premises Exchange snap-in.",
+                "command": "Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn"
+              },
               "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
               "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder} (on-prem)",
               "parameters": [
@@ -124,8 +144,8 @@
         "Map New Drive": {
           "cmdlet": "New-PSDrive",
           "requiresAdmin": false,
-          "template": "New-PSDrive -Name \"{driveLetter}\" -PSProvider FileSystem -Root \"{uncPath}\" -Persist",
-          "sentence": "I want to map drive {driveLetter}: to {uncPath}",
+          "template": "New-PSDrive -Name \"{driveLetter}\" -PSProvider FileSystem -Root \"{uncPath}\" {Persist} -Description \"{description}\"",
+          "sentence": "I want to map drive {driveLetter}: to {uncPath}, keep it {Persist}, note {description}",
           "parameters": [
             {
               "name": "driveLetter",
@@ -140,6 +160,19 @@
               "type": "string",
               "placeholder": "\\\\server\\share",
               "required": true
+            },
+            {
+              "name": "Persist",
+              "label": "keep the drive",
+              "type": "switch",
+              "default": "true",
+              "required": false
+            },
+            {
+              "name": "description",
+              "label": "note",
+              "type": "string",
+              "required": false
             }
           ]
         }
@@ -152,7 +185,13 @@
           "cmdlet": "Add-ADGroupMember",
           "module": "ActiveDirectory",
           "requiresAdmin": true,
-          "template": "Add-ADGroupMember -Identity \"{group}\" -Members \"{user}\"",
+          "signIn": {
+            "service": "Active Directory",
+            "mode": "credential",
+            "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
+            "command": "Import-Module ActiveDirectory"
+          },
+          "template": "Add-ADGroupMember -Identity \"{group}\" -Members \"{user}\" -Credential $__psgui_credential",
           "sentence": "I want to add {user} to the {group} group",
           "parameters": [
             {
@@ -165,6 +204,108 @@
               "name": "group",
               "label": "group",
               "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Add several users to a group": {
+          "cmdlet": "Add-ADGroupMember",
+          "module": "ActiveDirectory",
+          "requiresAdmin": true,
+          "signIn": {
+            "service": "Active Directory",
+            "mode": "credential",
+            "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
+            "command": "Import-Module ActiveDirectory"
+          },
+          "template": "Add-ADGroupMember -Identity \"{group}\" -Members {members} -Credential $__psgui_credential",
+          "sentence": "I want to add {members} to the {group} group",
+          "parameters": [
+            {
+              "name": "members",
+              "label": "users",
+              "type": "array",
+              "required": true
+            },
+            {
+              "name": "group",
+              "label": "group",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Create a user account": {
+          "cmdlet": "New-ADUser",
+          "module": "ActiveDirectory",
+          "requiresAdmin": true,
+          "signIn": {
+            "service": "Active Directory",
+            "mode": "credential",
+            "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
+            "command": "Import-Module ActiveDirectory"
+          },
+          "template": "New-ADUser -Name \"{name}\" -SamAccountName \"{sam}\" -GivenName \"{given}\" -Surname \"{surname}\" -Enabled {enabled} -AccountPassword {password} {ChangePasswordAtLogon}",
+          "sentence": "I want to create {name} ({sam}), given name {given}, surname {surname}, enabled {enabled}, password {password}, must change {ChangePasswordAtLogon}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "sam",
+              "label": "sign-in name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "given",
+              "label": "given name",
+              "type": "string",
+              "required": false
+            },
+            {
+              "name": "surname",
+              "label": "surname",
+              "type": "string",
+              "required": false
+            },
+            {
+              "name": "enabled",
+              "label": "enabled",
+              "type": "bool",
+              "default": "true",
+              "required": true
+            },
+            {
+              "name": "password",
+              "label": "password",
+              "type": "securestring",
+              "required": true
+            },
+            {
+              "name": "ChangePasswordAtLogon",
+              "label": "must change password",
+              "type": "switch",
+              "default": "true",
+              "required": false
+            }
+          ]
+        },
+        "Find inactive accounts": {
+          "cmdlet": "Search-ADAccount",
+          "module": "ActiveDirectory",
+          "requiresAdmin": true,
+          "template": "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan (New-TimeSpan -Days {days})",
+          "sentence": "I want user accounts inactive for {days} days",
+          "parameters": [
+            {
+              "name": "days",
+              "label": "days",
+              "type": "int",
+              "default": "90",
               "required": true
             }
           ]

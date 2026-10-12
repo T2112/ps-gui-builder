@@ -1,0 +1,40 @@
+# Personal project by Thomas Schueler.
+# Developed on personal time using personal equipment.
+# Not related to any employment.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build and test on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build and test
+        run: dotnet test PsGuiBuilder.sln --configuration Release --verbosity normal
+
+  linux:
+    name: Core tests on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test core library
+        run: dotnet test tests/PsGuiBuilder.Tests/PsGuiBuilder.Tests.csproj --configuration Release --verbosity normal
