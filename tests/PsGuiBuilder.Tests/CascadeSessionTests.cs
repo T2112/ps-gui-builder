@@ -76,7 +76,15 @@ public class CascadeSessionTests
         _session.Select(0, "Manage Users and Groups");
 
         Assert.Equal(2, _session.Levels.Count);
-        Assert.Equal("Add User to Group", Assert.Single(_session.Levels[1].Options).Name);
+        Assert.Equal(
+            new[]
+            {
+                "Add User to Group",
+                "Add several users to a group",
+                "Create a user account",
+                "Find inactive accounts"
+            },
+            _session.Levels[1].Options.Select(option => option.Name).ToArray());
         Assert.Null(_session.SelectedCommand);
     }
 
@@ -112,6 +120,19 @@ public class CascadeSessionTests
         var match = Assert.Single(_session.Levels[2].FilteredOptions);
         Assert.Equal("Remove Mailbox Folder Permission", match.Name);
         Assert.Contains("Remove-MailboxFolderPermission", match.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Typos_rank_the_closest_option_first()
+    {
+        _session.SetFilter(0, "exchnge");
+        Assert.Equal("Edit Exchange Settings", _session.Levels[0].FilteredOptions[0].Name);
+
+        _session.SetFilter(0, "netwrok drive");
+        Assert.Equal("Map a Network Drive", Assert.Single(_session.Levels[0].FilteredOptions).Name);
+
+        _session.SetFilter(0, "zzzzzz");
+        Assert.Empty(_session.Levels[0].FilteredOptions);
     }
 
     [Fact]

@@ -10,18 +10,22 @@ namespace PsGuiBuilder.Execution;
 public sealed class CommandExecutionService : ICommandExecutor
 {
     public Task<int> RunAsync(
-        string script,
+        ScriptRequest request,
         bool elevated,
         bool inProcess,
+        PowerShellShell? shell,
         IExecutionOutput output,
         CancellationToken cancellationToken)
     {
         if (elevated)
-            return new ElevatedCommandRunner().RunAsync(script, output, cancellationToken);
+            return new ElevatedCommandRunner().RunAsync(request, output, cancellationToken);
 
         if (inProcess)
-            return new InProcessScriptInvoker().InvokeAsync(script, output, cancellationToken);
+            return new InProcessScriptInvoker().InvokeAsync(request, output, cancellationToken);
 
-        return new ProcessScriptInvoker(PowerShellLocator.Resolve()).InvokeAsync(script, output, cancellationToken);
+        if (shell is null)
+            throw new InvalidOperationException("No PowerShell executable is available.");
+
+        return new ProcessScriptInvoker(shell).InvokeAsync(request, output, cancellationToken);
     }
 }

@@ -6,18 +6,27 @@ namespace PsGuiBuilder.Core.Execution;
 
 public sealed class ExecutionClient
 {
-    public async Task<int> RunAsync(
+    public Task<int> RunAsync(
         IFrameTransport transport,
         string script,
+        IExecutionOutput output,
+        CancellationToken cancellationToken) =>
+        RunAsync(transport, ScriptRequest.Plain(script), output, cancellationToken);
+
+    public async Task<int> RunAsync(
+        IFrameTransport transport,
+        ScriptRequest request,
         IExecutionOutput output,
         CancellationToken cancellationToken)
     {
         if (transport is null)
             throw new ArgumentNullException(nameof(transport));
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
         if (output is null)
             throw new ArgumentNullException(nameof(output));
 
-        await transport.SendAsync(ExecutionMessage.ScriptMessage(script), cancellationToken).ConfigureAwait(false);
+        await transport.SendAsync(ExecutionMessage.ScriptMessage(request), cancellationToken).ConfigureAwait(false);
         using var registration = cancellationToken.Register(() =>
         {
             try

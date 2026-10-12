@@ -18,12 +18,17 @@ public static partial class CommandTreeLoader
 
     private static readonly HashSet<string> NodeProperties = new(StringComparer.Ordinal)
     {
-        "description", "options", "cmdlet", "module", "requiresAdmin", "template", "sentence", "parameters"
+        "description", "options", "cmdlet", "module", "requiresAdmin", "shell", "signIn", "template", "sentence", "parameters"
     };
 
     private static readonly HashSet<string> ParameterProperties = new(StringComparer.Ordinal)
     {
         "name", "label", "type", "placeholder", "required", "choices", "default"
+    };
+
+    private static readonly HashSet<string> SignInProperties = new(StringComparer.Ordinal)
+    {
+        "service", "mode", "prompt", "command"
     };
 
     public static CommandTree LoadFile(string path)
@@ -169,6 +174,8 @@ public static partial class CommandTreeLoader
         var hasCommandShape = obj.ContainsKey("cmdlet")
             || obj.ContainsKey("module")
             || obj.ContainsKey("requiresAdmin")
+            || obj.ContainsKey("shell")
+            || obj.ContainsKey("signIn")
             || obj.ContainsKey("template")
             || obj.ContainsKey("sentence")
             || obj.ContainsKey("parameters");
@@ -269,6 +276,8 @@ public static partial class CommandTreeLoader
             }
         }
 
+        var shell = ReadShell(obj, path, errors);
+        var signIn = ReadSignIn(obj, path, errors);
         var template = ReadRequiredString(obj, "template", path, errors);
         var sentence = ReadRequiredString(obj, "sentence", path, errors);
         var parameters = ParseParameters(obj, path, errors);
@@ -288,7 +297,62 @@ public static partial class CommandTreeLoader
             requiresAdmin,
             template,
             sentence,
-            parameters);
+            parameters,
+            shell,
+            signIn);
+    }
+
+    private static PowerShellEdition ReadShell(JsonObject obj, string path, List<CommandTreeError> errors)
+    {
+        var text = ReadOptionalString(obj, "shell", path, errors);
+        if (text is null || text.Equals("pwsh", StringComparison.OrdinalIgnoreCase))
+            return PowerShellEdition.PowerShell7;
+
+        if (text.Equals("windows-powershell", StringComparison.OrdinalIgnoreCase))
+            return PowerShellEdition.WindowsPowerShell5;
+
+        errors.Add(new CommandTreeError(
+            JsonPath.Property(path, "shell"),
+            "\"shell\" must be \"pwsh\" or \"windows-powershell\"."));
+        return PowerShellEdition.PowerShell7;
+    }
+
+    private static SignInRequirement? ReadSignIn(JsonObject obj, string path, List<CommandTreeError> errors)
+    {
+        var signInPath = JsonPath.Property(path, "signIn");
+        if (!obj.TryGetPropertyValue("signIn", out var node) || node is null)
+            return null;
+
+        if (node is not JsonObject signIn)
+        {
+            errors.Add(new CommandTreeError(signInPath, "\"signIn\" must be an object."));
+            return null;
+        }
+
+        RejectUnknown(signIn, SignInProperties, signInPath, errors);
+        var service = ReadRequiredString(signIn, "service", signInPath, errors);
+        var prompt = ReadRequiredString(signIn, "prompt", signInPath, errors);
+        var command = ReadRequiredString(signIn, "command", signInPath, errors);
+        var modeText = ReadRequiredString(signIn, "mode", signInPath, errors);
+        SignInMode? mode = null;
+        if (modeText is not null)
+        {
+            if (modeText.Equals("interactive", StringComparison.OrdinalIgnoreCase))
+                mode = SignInMode.Interactive;
+            else if (modeText.Equals("credential", StringComparison.OrdinalIgnoreCase))
+                mode = SignInMode.Credential;
+            else
+            {
+                errors.Add(new CommandTreeError(
+                    JsonPath.Property(signInPath, "mode"),
+                    "\"mode\" must be \"interactive\" or \"credential\"."));
+            }
+        }
+
+        if (service is null || prompt is null || command is null || mode is null)
+            return null;
+
+        return new SignInRequirement(service, mode.Value, prompt, command);
     }
 
     private static void ValidateTemplate(
@@ -306,9 +370,24 @@ public static partial class CommandTreeLoader
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var use in uses)
         {
-            if (!parameters.ContainsKey(use.Name))
+            if (!parameters.TryGetValue(use.Name, out var parameter))
             {
                 errors.Add(new CommandTreeError(templatePath, $"Placeholder \"{{{use.Name}}}\" does not match a parameter."));
+                continue;
+            }
+
+            if (use.InsideDoubleQuotes && parameter.Type is not (ParameterType.String or ParameterType.Choice))
+            {
+                errors.Add(new CommandTreeError(
+                    templatePath,
+                    $"Placeholder \"{{{use.Name}}}\" is a {TypeName(parameter.Type)} and must sit outside double quotes."));
+            }
+
+            if (parameter.Type == ParameterType.Switch && !TemplateScanner.IsWholeToken(template, use))
+            {
+                errors.Add(new CommandTreeError(
+                    templatePath,
+                    $"Switch placeholder \"{{{use.Name}}}\" must be its own token. The builder substitutes -{use.Name} or removes it."));
             }
 
             seen.Add(use.Name);
@@ -438,32 +517,36 @@ public static partial class CommandTreeLoader
         ParameterType? type = null;
         if (typeText is not null)
         {
-            if (typeText.Equals("string", StringComparison.OrdinalIgnoreCase))
-                type = ParameterType.String;
-            else if (typeText.Equals("choice", StringComparison.OrdinalIgnoreCase))
-                type = ParameterType.Choice;
-            else
+            type = ParseType(typeText);
+            if (type is null)
             {
                 errors.Add(new CommandTreeError(
                     JsonPath.Property(path, "type"),
-                    "\"type\" must be \"string\" or \"choice\"."));
+                    "\"type\" must be \"string\", \"choice\", \"switch\", \"bool\", \"int\", \"number\", \"securestring\", or \"array\"."));
             }
         }
 
         var choices = Array.Empty<string>();
-        if (type == ParameterType.Choice)
+        if (type is ParameterType.Choice or ParameterType.Array && obj.ContainsKey("choices"))
+            choices = ReadChoices(obj, path, errors);
+        else if (type == ParameterType.Choice)
             choices = ReadChoices(obj, path, errors);
         else if (obj.ContainsKey("choices"))
         {
-            errors.Add(new CommandTreeError(JsonPath.Property(path, "choices"), "\"choices\" is only valid when type is \"choice\"."));
+            errors.Add(new CommandTreeError(
+                JsonPath.Property(path, "choices"),
+                "\"choices\" is only valid when type is \"choice\" or \"array\"."));
         }
 
-        if (type == ParameterType.Choice && defaultValue is not null && choices.Length > 0 && !choices.Contains(defaultValue, StringComparer.Ordinal))
+        if (type == ParameterType.SecureString && defaultValue is not null)
         {
             errors.Add(new CommandTreeError(
                 JsonPath.Property(path, "default"),
-                $"Default \"{defaultValue}\" is not one of the choices."));
+                "A securestring parameter cannot have a default. That would store a password in the command tree."));
+            defaultValue = null;
         }
+
+        defaultValue = NormalizeDefault(type, defaultValue, choices, path, errors);
 
         if (name is null || label is null || type is null)
             return null;
@@ -475,6 +558,97 @@ public static partial class CommandTreeLoader
         }
 
         return new CommandParameter(name, label, type.Value, required, placeholder, defaultValue, choices);
+    }
+
+    private static ParameterType? ParseType(string typeText)
+    {
+        if (typeText.Equals("string", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.String;
+        if (typeText.Equals("choice", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Choice;
+        if (typeText.Equals("switch", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Switch;
+        if (typeText.Equals("bool", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Bool;
+        if (typeText.Equals("int", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Int;
+        if (typeText.Equals("number", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Number;
+        if (typeText.Equals("securestring", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.SecureString;
+        if (typeText.Equals("array", StringComparison.OrdinalIgnoreCase))
+            return ParameterType.Array;
+
+        return null;
+    }
+
+    private static string TypeName(ParameterType type) => type switch
+    {
+        ParameterType.String => "string",
+        ParameterType.Choice => "choice",
+        ParameterType.Switch => "switch",
+        ParameterType.Bool => "bool",
+        ParameterType.Int => "int",
+        ParameterType.Number => "number",
+        ParameterType.SecureString => "securestring",
+        ParameterType.Array => "array",
+        _ => "parameter"
+    };
+
+    private static string? NormalizeDefault(
+        ParameterType? type,
+        string? defaultValue,
+        IReadOnlyList<string> choices,
+        string path,
+        List<CommandTreeError> errors)
+    {
+        if (type is null || defaultValue is null)
+            return defaultValue;
+
+        var propertyPath = JsonPath.Property(path, "default");
+        switch (type)
+        {
+            case ParameterType.Choice:
+                if (choices.Count > 0 && !choices.Contains(defaultValue, StringComparer.Ordinal))
+                {
+                    errors.Add(new CommandTreeError(propertyPath, $"Default \"{defaultValue}\" is not one of the choices."));
+                }
+
+                return defaultValue;
+            case ParameterType.Array:
+                if (choices.Count > 0 && !choices.Contains(defaultValue, StringComparer.Ordinal))
+                {
+                    errors.Add(new CommandTreeError(propertyPath, $"Default \"{defaultValue}\" is not one of the choices."));
+                }
+
+                return defaultValue;
+            case ParameterType.Switch:
+            case ParameterType.Bool:
+                if (defaultValue.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    return "true";
+                if (defaultValue.Equals("false", StringComparison.OrdinalIgnoreCase))
+                    return "false";
+
+                errors.Add(new CommandTreeError(propertyPath, "\"default\" for a switch or bool must be \"true\" or \"false\"."));
+                return defaultValue;
+            case ParameterType.Int:
+                if (!long.TryParse(defaultValue, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _))
+                {
+                    errors.Add(new CommandTreeError(propertyPath, "\"default\" for an int must be an integer."));
+                }
+
+                return defaultValue.Trim();
+            case ParameterType.Number:
+                if (!ParameterSyntax.TryParseNumber(defaultValue, out var number))
+                {
+                    errors.Add(new CommandTreeError(propertyPath, "\"default\" for a number must be a decimal number."));
+                    return defaultValue;
+                }
+
+                return number;
+            default:
+                return defaultValue;
+        }
     }
 
     private static string[] ReadChoices(JsonObject obj, string path, List<CommandTreeError> errors)

@@ -30,6 +30,11 @@ public class CommandTreeLoaderTests
         Assert.Equal(ParameterType.Choice, add.Parameters[1].Type);
         Assert.Equal("Calendar", add.Parameters[1].Default);
         Assert.Contains("Editor", add.Parameters[3].Choices);
+        Assert.Equal(SignInMode.Interactive, add.SignIn!.Mode);
+        Assert.Equal(PowerShellEdition.PowerShell7, add.Shell);
+
+        var onPrem = tree.Root.Children[0].Children[1].Children[0].Command;
+        Assert.Equal(PowerShellEdition.WindowsPowerShell5, onPrem!.Shell);
     }
 
     [Fact]
@@ -105,14 +110,14 @@ public class CommandTreeLoaderTests
             type: "string",
             extra: ", \"choices\": [\"A\"]")));
 
-        Assert.Contains("only valid when type is \"choice\"", error.Message, StringComparison.Ordinal);
+        Assert.Contains("only valid when type is \"choice\" or \"array\"", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Rejects_unknown_parameter_types()
     {
-        var error = Assert.Throws<CommandTreeException>(() => CommandTreeLoader.Load(Command(type: "int")));
-        Assert.Contains("\"string\" or \"choice\"", error.Message, StringComparison.Ordinal);
+        var error = Assert.Throws<CommandTreeException>(() => CommandTreeLoader.Load(Command(type: "datetime")));
+        Assert.Contains("securestring", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

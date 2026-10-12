@@ -72,6 +72,59 @@
         <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="#6F655C" Margin="2,3,0,0" />
       </StackPanel>
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SwitchFieldViewModel}">
+      <StackPanel Margin="0,0,8,4" MinWidth="150">
+        <CheckBox Content="{Binding Parameter.Label}"
+                  IsChecked="{Binding IsChecked}"
+                  Margin="0,8,0,0" />
+        <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="#6F655C" Margin="2,3,0,0" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:BoolFieldViewModel}">
+      <StackPanel Margin="0,0,8,4" MinWidth="150">
+        <ComboBox ItemsSource="{Binding Options}"
+                  DisplayMemberPath="Label"
+                  SelectedValuePath="Value"
+                  SelectedValue="{Binding Value}"
+                  MinWidth="150"
+                  Padding="6,4"
+                  FontSize="14" />
+        <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="#6F655C" Margin="2,3,0,0" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SecureFieldViewModel}">
+      <StackPanel Margin="0,0,8,4" MinWidth="180">
+        <PasswordBox controls:SecretBox.Text="{Binding Secret, UpdateSourceTrigger=PropertyChanged}"
+                     MinWidth="180"
+                     Padding="8,6"
+                     FontSize="14" />
+        <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="#6F655C" Margin="2,3,0,0" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:ArrayFieldViewModel}">
+      <StackPanel Margin="0,0,8,4" MinWidth="220">
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <DockPanel Margin="0,0,0,4" LastChildFill="True">
+                <Button DockPanel.Dock="Right"
+                        Content="Remove"
+                        Margin="6,0,0,0"
+                        Padding="8,4"
+                        Command="{Binding DataContext.RemoveRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" />
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Padding="8,6" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Content="Add value"
+                HorizontalAlignment="Left"
+                Padding="8,4"
+                Command="{Binding AddRowCommand}" />
+        <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="#6F655C" Margin="2,3,0,0" />
+      </StackPanel>
+    </DataTemplate>
   </Window.Resources>
 
   <Grid Margin="20">
@@ -146,6 +199,21 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
+            <DockPanel Margin="0,12,0,0">
+              <Button DockPanel.Dock="Right"
+                      Content="Look up"
+                      Command="{Binding LookupCommand}"
+                      Style="{StaticResource SecondaryButton}"
+                      Margin="8,0,0,0" />
+              <TextBox Text="{Binding CmdletQuery, UpdateSourceTrigger=PropertyChanged}"
+                       Padding="10,8"
+                       ToolTip="Cmdlet name, such as Get-ChildItem or ActiveDirectory\Get-ADUser" />
+            </DockPanel>
+            <TextBlock Text="Or look up any installed cmdlet. The form comes from Get-Command, not from the tree."
+                       Foreground="#6F655C"
+                       FontSize="12"
+                       Margin="2,6,0,0"
+                       TextWrapping="Wrap" />
           </StackPanel>
         </Border>
 
@@ -231,7 +299,7 @@
                     IsEnabled="{Binding CanRunInProcess}"
                     VerticalAlignment="Center"
                     Margin="0,0,0,8"
-                    ToolTip="Uses the embedded PowerShell 7 engine instead of a separate process. It cannot elevate, and Windows PowerShell 5.1 modules may be missing." />
+                    ToolTip="Uses the embedded PowerShell 7 engine instead of pwsh. It cannot elevate, and it cannot run a command that asks for Windows PowerShell 5.1." />
         </WrapPanel>
         <TextBlock Text="{Binding ElevationHint}" Foreground="#6F655C" TextWrapping="Wrap" Margin="0,0,0,8" />
       </StackPanel>

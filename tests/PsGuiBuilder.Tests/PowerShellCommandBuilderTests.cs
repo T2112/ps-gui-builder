@@ -27,10 +27,10 @@ public class PowerShellCommandBuilderTests
         Assert.Equal(
             "Add-MailboxFolderPermission -Identity \"owner@yourdomain.com:Calendar\" -User \"delegate@yourdomain.com\" -AccessRights Editor",
             result.CommandText);
-        Assert.StartsWith(
-            "Import-Module ExchangeOnlineManagement" + Environment.NewLine,
-            ScriptComposer.ComposePreview(command, result.CommandText),
-            StringComparison.Ordinal);
+        var preview = ScriptComposer.ComposePreview(command, result.CommandText);
+        Assert.Contains("Import-Module ExchangeOnlineManagement", preview, StringComparison.Ordinal);
+        Assert.Contains("Connect-ExchangeOnline -ShowBanner:$false", preview, StringComparison.Ordinal);
+        Assert.DoesNotContain("password", preview, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -40,13 +40,15 @@ public class PowerShellCommandBuilderTests
         var result = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?>
         {
             ["driveLetter"] = "Z",
-            ["uncPath"] = "\\\\server\\share"
+            ["uncPath"] = "\\\\server\\share",
+            ["Persist"] = "true"
         });
 
         Assert.True(result.IsComplete);
         Assert.Equal(
             "New-PSDrive -Name \"Z\" -PSProvider FileSystem -Root \"\\\\server\\share\" -Persist",
             result.CommandText);
+        Assert.DoesNotContain("Description", result.CommandText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -147,7 +149,7 @@ public class PowerShellCommandBuilderTests
 
         var empty = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?> { ["message"] = "" });
         Assert.True(empty.IsComplete);
-        Assert.Equal("Write-Output \"\"", empty.CommandText);
+        Assert.Equal("Write-Output", empty.CommandText);
     }
 
     [Fact]
@@ -183,11 +185,13 @@ public class PowerShellCommandBuilderTests
             ["user"] = "ada",
             ["group"] = "Ops"
         });
-        var script = ScriptComposer.ComposeExecution(command, built.CommandText);
+        var script = ScriptComposer.ComposeExecution(command, built.ExecutionText, "ada.ops");
 
         Assert.Contains("$ErrorActionPreference = 'Stop'", script, StringComparison.Ordinal);
         Assert.Contains("Import-Module ActiveDirectory", script, StringComparison.Ordinal);
-        Assert.Contains("Add-ADGroupMember -Identity \"Ops\" -Members \"ada\"", script, StringComparison.Ordinal);
+        Assert.Contains("Add-ADGroupMember -Identity \"Ops\" -Members \"ada\" -Credential $__psgui_credential", script, StringComparison.Ordinal);
+        Assert.Contains("$__psgui_username = 'ada.ops'", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("S3cret", script, StringComparison.Ordinal);
         Assert.Equal(script, PowerShellCommandEncoding.FromEncodedCommand(PowerShellCommandEncoding.ToEncodedCommand(script)));
     }
 
@@ -201,6 +205,211 @@ public class PowerShellCommandBuilderTests
         Assert.Equal(System.Text.Encoding.Unicode, windows.Encoding);
         Assert.Empty(modern.Encoding.GetPreamble());
         Assert.NotEqual(windows.Encoding.WebName, modern.Encoding.WebName);
+    }
+
+    [Fact]
+    public void Omits_a_blank_optional_flag_and_keeps_a_switch_that_is_on()
+    {
+        const string json = """
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "Get-ChildItem",
+                  "template": "Get-ChildItem -Path \"{path}\" -Filter \"{filter}\" {Recurse}",
+                  "sentence": "List {path} matching {filter} recurse {Recurse}",
+                  "parameters": [
+                    { "name": "path", "label": "path", "type": "string", "required": true },
+                    { "name": "filter", "label": "filter", "type": "string", "required": false },
+                    { "name": "Recurse", "label": "recurse", "type": "switch", "required": false, "default": "false" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """;
+
+        var command = CommandTreeLoader.Load(json).Root.Children[0].Children[0].Command!;
+        var off = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?>
+        {
+            ["path"] = "C:\\Temp",
+            ["filter"] = "",
+            ["Recurse"] = "false"
+        });
+        Assert.True(off.IsComplete);
+        Assert.Equal("Get-ChildItem -Path \"C:\\Temp\"", off.CommandText);
+
+        var on = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?>
+        {
+            ["path"] = "C:\\Temp",
+            ["filter"] = "*.log",
+            ["Recurse"] = "true"
+        });
+        Assert.Equal("Get-ChildItem -Path \"C:\\Temp\" -Filter \"*.log\" -Recurse", on.CommandText);
+    }
+
+    [Fact]
+    public void Renders_bool_int_number_and_array_values()
+    {
+        const string json = """
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "Set-Item",
+                  "template": "Set-Item -Enabled {enabled} -Count {count} -Ratio {ratio} -Name {names}",
+                  "sentence": "Set {enabled} {count} {ratio} {names}",
+                  "parameters": [
+                    { "name": "enabled", "label": "enabled", "type": "bool", "required": true },
+                    { "name": "count", "label": "count", "type": "int", "required": true },
+                    { "name": "ratio", "label": "ratio", "type": "number", "required": false },
+                    { "name": "names", "label": "names", "type": "array", "required": true }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """;
+
+        var command = CommandTreeLoader.Load(json).Root.Children[0].Children[0].Command!;
+        var result = PowerShellCommandBuilder.Build(command, new Dictionary<string, ParameterValue>
+        {
+            ["enabled"] = ParameterValue.FromText("false"),
+            ["count"] = ParameterValue.FromText("12"),
+            ["ratio"] = ParameterValue.FromText(""),
+            ["names"] = ParameterValue.FromItems(new[] { "ada", "O'Brien" })
+        });
+
+        Assert.True(result.IsComplete);
+        Assert.Equal("Set-Item -Enabled $false -Count 12 -Name ada, 'O''Brien'", result.CommandText);
+        Assert.Equal(result.CommandText, result.ExecutionText);
+    }
+
+    [Fact]
+    public void A_blank_required_number_stays_in_the_preview()
+    {
+        const string json = """
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "Set-Item",
+                  "template": "Set-Item -Count {count}",
+                  "sentence": "Set {count}",
+                  "parameters": [
+                    { "name": "count", "label": "count", "type": "int", "required": true }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """;
+
+        var command = CommandTreeLoader.Load(json).Root.Children[0].Children[0].Command!;
+        var result = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?> { ["count"] = "" });
+
+        Assert.False(result.IsComplete);
+        Assert.Contains("-Count", result.CommandText, StringComparison.Ordinal);
+        Assert.Contains("count", Assert.Single(result.Errors), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Hides_a_secure_string_in_the_preview_and_the_execution_script()
+    {
+        const string json = """
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "New-ADUser",
+                  "template": "New-ADUser -Name \"{name}\" -AccountPassword {password}",
+                  "sentence": "Create {name} with {password}",
+                  "parameters": [
+                    { "name": "name", "label": "name", "type": "string", "required": true },
+                    { "name": "password", "label": "password", "type": "securestring", "required": true }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """;
+
+        var command = CommandTreeLoader.Load(json).Root.Children[0].Children[0].Command!;
+        var result = PowerShellCommandBuilder.Build(command, new Dictionary<string, string?>
+        {
+            ["name"] = "Ada",
+            ["password"] = "S3cret-Value!"
+        });
+
+        Assert.True(result.IsComplete);
+        Assert.Equal("New-ADUser -Name \"Ada\" -AccountPassword ***", result.CommandText);
+        Assert.Equal("New-ADUser -Name \"Ada\" -AccountPassword $__psgui_secret_password", result.ExecutionText);
+        Assert.Equal("S3cret-Value!", result.Secrets["password"]);
+        Assert.DoesNotContain("S3cret-Value!", result.CommandText, StringComparison.Ordinal);
+        Assert.DoesNotContain("S3cret-Value!", result.ExecutionText, StringComparison.Ordinal);
+
+        var script = ScriptComposer.ComposeExecution(command, result.ExecutionText);
+        Assert.DoesNotContain("S3cret-Value!", script, StringComparison.Ordinal);
+        Assert.Contains("$ErrorActionPreference = 'Stop'", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Rejects_a_secure_string_default_and_a_switch_inside_quotes()
+    {
+        var stored = Assert.Throws<CommandTreeException>(() => CommandTreeLoader.Load("""
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "New-ADUser",
+                  "template": "New-ADUser -AccountPassword {password}",
+                  "sentence": "Password {password}",
+                  "parameters": [
+                    { "name": "password", "label": "password", "type": "securestring", "required": true, "default": "hunter2" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """));
+        Assert.Contains("cannot have a default", stored.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("hunter2", stored.Message, StringComparison.Ordinal);
+
+        var quoted = Assert.Throws<CommandTreeException>(() => CommandTreeLoader.Load("""
+        {
+          "version": "1",
+          "categories": {
+            "Demo": {
+              "options": {
+                "Run": {
+                  "cmdlet": "Get-ChildItem",
+                  "template": "Get-ChildItem \"{Recurse}\"",
+                  "sentence": "Recurse {Recurse}",
+                  "parameters": [
+                    { "name": "Recurse", "label": "recurse", "type": "switch", "required": false }
+                  ]
+                }
+              }
+            }
+          }
+        }
+        """));
+        Assert.Contains("outside double quotes", quoted.Message, StringComparison.Ordinal);
     }
 
     private static CommandDefinition Find(string name)

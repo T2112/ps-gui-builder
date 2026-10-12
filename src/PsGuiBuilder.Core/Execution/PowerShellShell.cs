@@ -3,6 +3,7 @@
 // Not related to any employment.
 
 using System.Text;
+using PsGuiBuilder.Core.CommandTree;
 
 namespace PsGuiBuilder.Core.Execution;
 
@@ -55,19 +56,117 @@ public sealed class PowerShellShell
             "powershell.exe"));
 }
 
+public sealed class ShellResolution
+{
+    public ShellResolution(PowerShellShell? shell, string? notice, string? error)
+    {
+        Shell = shell;
+        Notice = notice;
+        Error = error;
+    }
+
+    public PowerShellShell? Shell { get; }
+
+    public string? Notice { get; }
+
+    public string? Error { get; }
+}
+
 public static class PowerShellLocator
 {
-    public static PowerShellShell Resolve()
+    public const string PwshFallbackMessage =
+        "PowerShell 7 (pwsh) was not found. Running with Windows PowerShell 5.1 instead.";
+
+    public static ShellResolution Resolve(PowerShellEdition edition) =>
+        Resolve(edition, static name => Environment.GetEnvironmentVariable(name), File.Exists);
+
+    public static PowerShellShell Resolve() =>
+        Resolve(PowerShellEdition.PowerShell7).Shell ?? PowerShellShell.ForExecutable("pwsh");
+
+    public static ShellResolution Resolve(
+        PowerShellEdition edition,
+        Func<string, string?> environment,
+        Func<string, bool> exists)
     {
-        var overridePath = Environment.GetEnvironmentVariable(PowerShellShell.ShellEnvironmentVariable);
+        if (environment is null)
+            throw new ArgumentNullException(nameof(environment));
+        if (exists is null)
+            throw new ArgumentNullException(nameof(exists));
+
+        if (edition == PowerShellEdition.WindowsPowerShell5)
+        {
+            var windows = WindowsPowerShellPath();
+            if (!exists(windows))
+            {
+                return new ShellResolution(
+                    null,
+                    null,
+                    "Windows PowerShell 5.1 was not found at " + windows + ".");
+            }
+
+            return new ShellResolution(PowerShellShell.ForExecutable(windows), null, null);
+        }
+
+        var overridePath = environment(PowerShellShell.ShellEnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(overridePath))
-            return PowerShellShell.ForExecutable(overridePath.Trim());
+        {
+            var chosen = overridePath.Trim();
+            if (IsFilePath(chosen) && !exists(chosen))
+            {
+                return new ShellResolution(null, null, "PSGUIBUILDER_SHELL does not exist: " + chosen);
+            }
 
-        if (OperatingSystem.IsWindows())
-            return PowerShellShell.WindowsPowerShell();
+            return new ShellResolution(PowerShellShell.ForExecutable(chosen), null, null);
+        }
 
-        return PowerShellShell.ForExecutable("pwsh");
+        var pwsh = FindPwsh(exists);
+        if (pwsh is not null)
+            return new ShellResolution(PowerShellShell.ForExecutable(pwsh), null, null);
+
+        var fallback = WindowsPowerShellPath();
+        if (exists(fallback))
+            return new ShellResolution(PowerShellShell.ForExecutable(fallback), PwshFallbackMessage, null);
+
+        return new ShellResolution(null, null, "PowerShell 7 (pwsh) was not found, and Windows PowerShell 5.1 is not available.");
     }
+
+    private static string? FindPwsh(Func<string, bool> exists)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (!string.IsNullOrEmpty(programFiles))
+            {
+                var installed = Path.Combine(programFiles, "PowerShell", "7", "pwsh.exe");
+                if (exists(installed))
+                    return installed;
+            }
+        }
+
+        return FindOnPath(OperatingSystem.IsWindows() ? "pwsh.exe" : "pwsh", exists);
+    }
+
+    private static string? FindOnPath(string fileName, Func<string, bool> exists)
+    {
+        var path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path))
+            return null;
+
+        foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(directory, fileName);
+            if (exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private static string WindowsPowerShellPath() =>
+        Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
+
+    private static bool IsFilePath(string value) =>
+        Path.IsPathRooted(value) || value.Contains(Path.DirectorySeparatorChar) || value.Contains(Path.AltDirectorySeparatorChar);
 }
 
 public static class PowerShellCommandEncoding

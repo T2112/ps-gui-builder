@@ -10,4 +10,7 @@
     <AssemblyName>PsGuiBuilder.Core</AssemblyName>
     <Description>Personal PowerShell GUI Command Builder core library.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="PsGuiBuilder.Tests" />
+  </ItemGroup>
 </Project>

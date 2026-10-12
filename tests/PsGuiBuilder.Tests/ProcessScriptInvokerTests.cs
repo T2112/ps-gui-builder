@@ -19,7 +19,7 @@ public class ProcessScriptInvokerTests
             windows: "[Console]::Out.WriteLine('hello'); [Console]::Error.WriteLine('bad'); exit 3");
 
         var output = new CollectingOutput();
-        var code = await invoker.InvokeAsync(script, output, CancellationToken.None);
+        var code = await invoker.InvokeAsync(ScriptRequest.Plain(script), output, CancellationToken.None);
 
         Assert.Equal(3, code);
         Assert.Contains("hello", output.Stdout, StringComparison.Ordinal);
@@ -35,7 +35,7 @@ public class ProcessScriptInvokerTests
 
         using var cts = new CancellationTokenSource();
         var started = Stopwatch.StartNew();
-        var running = invoker.InvokeAsync(script, new CollectingOutput(), cts.Token);
+        var running = invoker.InvokeAsync(ScriptRequest.Plain(script), new CollectingOutput(), cts.Token);
         await Task.Delay(400);
         cts.Cancel();
 

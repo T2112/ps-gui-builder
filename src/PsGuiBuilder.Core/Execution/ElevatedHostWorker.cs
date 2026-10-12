@@ -13,8 +13,8 @@ public sealed class ElevatedHostWorker
         if (invoker is null)
             throw new ArgumentNullException(nameof(invoker));
 
-        var script = await ReadScriptAsync(transport, cancellationToken).ConfigureAwait(false);
-        if (script is null)
+        var request = await ReadScriptAsync(transport, cancellationToken).ConfigureAwait(false);
+        if (request is null)
             return;
 
         using var invokeCts = new CancellationTokenSource();
@@ -23,7 +23,7 @@ public sealed class ElevatedHostWorker
         var output = new TransportOutput(transport);
         try
         {
-            var code = await invoker.InvokeAsync(script, output, invokeCts.Token).ConfigureAwait(false);
+            var code = await invoker.InvokeAsync(request, output, invokeCts.Token).ConfigureAwait(false);
             await TrySendAsync(transport, ExecutionMessage.ExitMessage(code)).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -51,7 +51,7 @@ public sealed class ElevatedHostWorker
         }
     }
 
-    private static async Task<string?> ReadScriptAsync(IFrameTransport transport, CancellationToken cancellationToken)
+    private static async Task<ScriptRequest?> ReadScriptAsync(IFrameTransport transport, CancellationToken cancellationToken)
     {
         while (true)
         {
@@ -74,7 +74,7 @@ public sealed class ElevatedHostWorker
                 return null;
             }
 
-            return incoming.Script;
+            return new ScriptRequest(incoming.Script, incoming.Secrets, incoming.Interactive == true);
         }
     }
 

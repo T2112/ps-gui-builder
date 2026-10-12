@@ -14,7 +14,7 @@ namespace PsGuiBuilder.Execution;
 
 public sealed class ElevatedCommandRunner
 {
-    public async Task<int> RunAsync(string script, IExecutionOutput output, CancellationToken cancellationToken)
+    public async Task<int> RunAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken)
     {
         var pipeName = "PsGuiBuilder." + Guid.NewGuid().ToString("N");
         using var server = CreateServer(pipeName);
@@ -41,7 +41,7 @@ public sealed class ElevatedCommandRunner
             }
 
             var transport = new StreamFrameTransport(server);
-            return await new ExecutionClient().RunAsync(transport, script, output, cancellationToken).ConfigureAwait(false);
+            return await new ExecutionClient().RunAsync(transport, request, output, cancellationToken).ConfigureAwait(false);
         }
         finally
         {

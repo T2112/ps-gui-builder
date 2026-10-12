@@ -32,17 +32,36 @@ The `command-tree.json` drives the entire cascading menus and parameter forms. A
 
 The desktop app creates the pipe before the helper starts. The access list allows the current user and Administrators. Messages are length-prefixed UTF-8 JSON: `script`, `stdout`, `stderr`, `exit`, `error`, `cancel`, and `cancelled`. Cancel is a message, because a non-elevated process cannot reliably kill an elevated one. If the user declines the UAC prompt, the run is treated as cancelled. The script is sent through the pipe, not placed on the command line.
 
-The helper runs Windows PowerShell 5.1 (`powershell.exe`) with `-EncodedCommand`, unless the script is very long, in which case it uses a temporary `.ps1` file that is deleted afterward. Set `PSGUIBUILDER_SHELL` to point at `pwsh` or another host. Standard output from `powershell.exe` is decoded as UTF-16; `pwsh` is decoded as UTF-8. The script sets `$ErrorActionPreference = 'Stop'` and `$ProgressPreference = 'SilentlyContinue'`, and imports `module` when the command defines one.
+The helper runs PowerShell 7 (`pwsh`) unless the command sets `"shell": "windows-powershell"`, which forces Windows PowerShell 5.1 for snap-ins such as on-premises Exchange. If `pwsh` is not installed, the run falls back to Windows PowerShell 5.1 and the output pane says so. `PSGUIBUILDER_SHELL` can point at a specific PowerShell 7 executable; it does not override a command that asks for 5.1. `powershell.exe` output is decoded as UTF-16; `pwsh` is decoded as UTF-8. The script sets `$ErrorActionPreference = 'Stop'` and `$ProgressPreference = 'SilentlyContinue'`, and imports `module` when the command defines one.
 
-Non-elevated runs use the same process invoker without `runas`. **Run inside this app** uses the embedded PowerShell 7 engine instead. That mode cannot elevate, and it may not see Windows PowerShell 5.1 modules such as ActiveDirectory or ExchangeOnlineManagement.
+Delivery is `-EncodedCommand`, or a temporary `.ps1` when that would be very long. A run that carries a secure string or a sign-in password does not use either of those. The secret is sent on the named pipe as its own field, then written only to the PowerShell process standard input as a `ConvertTo-SecureString` prologue. It is not placed on the command line, not written to a script file, and not copied into the preview or the output pane. The command text references `$__psgui_secret_<name>`. In-process runs put the same value in a `SecureString` variable and never add the characters to the script. Secrets shorter than 4 characters are still kept out of the preview and the script; they are not scrubbed from later cmdlet output, because a one-letter password would match unrelated text.
+
+Non-elevated runs use the same process invoker without `runas`. **Run inside this app** uses the embedded PowerShell 7 engine instead. That mode cannot elevate, and it is disabled when the command asks for Windows PowerShell 5.1.
 
 ## Command tree and quoting
 
-A node is either a branch (`options`) or a command (`cmdlet`), not both. Unknown properties are errors. Parameter `type` is `string` or `choice`. Every parameter must appear in both the template and the sentence. Placeholders inside single quotes are errors, because PowerShell would not expand them.
+A node is either a branch (`options`) or a command (`cmdlet`), not both. Unknown properties are errors. Parameter `type` is `string`, `choice`, `switch`, `bool`, `int`, `number`, `securestring`, or `array`. Every parameter must appear in both the template and the sentence. Placeholders inside single quotes are errors, because PowerShell would not expand them. `switch`, `bool`, `int`, `number`, `securestring`, and `array` placeholders must sit outside double quotes, and a switch placeholder must be its own token. `choices` is valid on `choice` and `array`. A `securestring` cannot have a `default`, because that would store a password in the tree. Switch and bool defaults are the strings `"true"` or `"false"`.
 
-The live preview substitutes the template. Inside the author's double quotes, `` ` ``, `"`, `$`, and newlines are backtick-escaped so the value stays data. Outside quotes, a simple identifier is left bare (so `Editor` stays `Editor`) and anything else is wrapped in single quotes with embedded quotes doubled. Optional parameters are not omitted when blank; the template is one string, so a blank value is inserted as an empty quoted string. The sample tree has no optional parameters.
+`"shell"` is `pwsh` (the default) or `windows-powershell`. `"signIn"` is optional:
 
-Cascade search splits the typed text on whitespace. Every token must appear in the option name or its description (command options include the cmdlet and module). The first box is labeled "I Want To:" and later boxes "Then:". The tree does not define its own level labels.
+```json
+{
+  "service": "Exchange Online",
+  "mode": "interactive",
+  "prompt": "Sign in to Exchange Online. A browser window will open.",
+  "command": "Connect-ExchangeOnline -ShowBanner:$false"
+}
+```
+
+`mode` is `interactive` or `credential`. Interactive mode runs `command` in the same PowerShell process as the user's command, without `-NonInteractive`, so a module can open a browser. Credential mode asks for a user name and a masked password, builds `$__psgui_credential` from `$__psgui_username` and `$__psgui_secret_signin`, then runs `command`. Passwords are not written into `command-tree.json`, the preview, or the output log.
+
+The live preview substitutes the template. Inside the author's double quotes, `` ` ``, `"`, `$`, and newlines are backtick-escaped so the value stays data. Outside quotes, a simple identifier is left bare (so `Editor` stays `Editor`) and anything else is wrapped in single quotes with embedded quotes doubled. `bool` becomes `$true` or `$false`. `int` and `number` are unquoted invariant-culture numbers. `array` is a comma-separated list of quoted items. `switch` becomes `-<name>` when on. A secure string is shown as `***` in the preview and as `$__psgui_secret_<name>` in the script that actually runs.
+
+A blank optional parameter drops its flag and value when the placeholder is the whole argument (optionally in double quotes) or, for a switch, its own token. A blank value that is embedded in other template text, such as `{owner}:{folder}`, cannot be dropped; the form asks for a value. Required parameters are never dropped. An off switch is omitted even when it is required, and the form asks for it to be turned on, because writing the flag would turn the switch on.
+
+Cascade search is fuzzy. The typed text is split on whitespace, every token must match the option name or description within a small edit distance (a transposition counts as one edit), and the matches are ordered by relevance. The first box is labeled "I Want To:" and later boxes "Then:". The tree does not define its own level labels.
+
+Cmdlets that are not in the tree can be looked up by name. The app runs `Get-Command` and builds a mechanical sentence from the parameter metadata. Common parameters are skipped. Dynamic parameters are not included. Unrecognized .NET types become strings. `Get-Help` is not called, because help content may be missing and updating it can prompt or use the network. The looked-up command is not written back to `command-tree.json`.
 
 ## Ownership Logging
 
@@ -59,6 +78,5 @@ Cascade search splits the typed text on whitespace. Every token must appear in t
 ## Next Steps
 
 1. Add more categories and cmdlets to `command-tree.json`.
-2. Decide whether a blank optional parameter should omit its flag. The template would need a way to mark an optional clause.
-3. Decide whether elevated commands should keep using Windows PowerShell 5.1, which matches the Exchange and Active Directory modules in the sample, or move to PowerShell 7.
-4. Decide whether `requiresAdmin` means a local UAC prompt, an Exchange or directory role, or both. The app currently treats it as a local UAC prompt. The sample templates do not call `Connect-ExchangeOnline`.
+2. `requiresAdmin` is a local UAC prompt. Service sign-in is the separate `signIn` object. The sample Exchange Online command calls `Connect-ExchangeOnline`; local elevation does not sign you in by itself.
+3. Looked-up cmdlets do not include dynamic parameters, and their sentences are generated from parameter names. A hand-written sentence in the tree is still the better form when you know the command.

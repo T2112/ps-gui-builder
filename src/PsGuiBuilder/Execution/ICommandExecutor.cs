@@ -9,9 +9,10 @@ namespace PsGuiBuilder.Execution;
 public interface ICommandExecutor
 {
     Task<int> RunAsync(
-        string script,
+        ScriptRequest request,
         bool elevated,
         bool inProcess,
+        PowerShellShell? shell,
         IExecutionOutput output,
         CancellationToken cancellationToken);
 }

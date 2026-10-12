@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace PsGuiBuilder.Core.Building;
 
-internal readonly record struct PlaceholderUse(string Name, bool InsideDoubleQuotes);
+internal readonly record struct PlaceholderUse(string Name, bool InsideDoubleQuotes, int Start, int Length);
 
 internal static partial class TemplateScanner
 {
@@ -59,7 +59,7 @@ internal static partial class TemplateScanner
                         continue;
                     }
 
-                    found?.Add(new PlaceholderUse(name, InsideDoubleQuotes: false));
+                    found?.Add(new PlaceholderUse(name, InsideDoubleQuotes: false, index, next - index));
                     builder.Append(replace is null ? template[index..next] : replace(name, false));
                     index = next;
                     continue;
@@ -112,7 +112,7 @@ internal static partial class TemplateScanner
                         continue;
                     }
 
-                    found?.Add(new PlaceholderUse(name, InsideDoubleQuotes: true));
+                    found?.Add(new PlaceholderUse(name, InsideDoubleQuotes: true, index, next - index));
                     builder.Append(replace is null ? template[index..next] : replace(name, true));
                     index = next;
                     continue;
@@ -165,6 +165,105 @@ internal static partial class TemplateScanner
         name = match.Groups[1].Value;
         nextIndex = openIndex + match.Length;
         return true;
+    }
+
+    internal static bool IsWholeToken(string template, PlaceholderUse use)
+    {
+        if (use.InsideDoubleQuotes)
+            return false;
+
+        var before = use.Start > 0 ? template[use.Start - 1] : ' ';
+        var afterIndex = use.Start + use.Length;
+        var after = afterIndex < template.Length ? template[afterIndex] : ' ';
+        return char.IsWhiteSpace(before) && char.IsWhiteSpace(after);
+    }
+
+    internal static bool TryGetRemovalRange(string template, PlaceholderUse use, out int start, out int end)
+    {
+        start = use.Start;
+        end = use.Start + use.Length;
+        if (use.InsideDoubleQuotes)
+        {
+            var open = use.Start - 1;
+            while (open >= 0 && template[open] != '"')
+            {
+                if (!char.IsWhiteSpace(template[open]))
+                    return false;
+
+                open--;
+            }
+
+            if (open < 0)
+                return false;
+
+            var close = use.Start + use.Length;
+            while (close < template.Length && template[close] != '"')
+            {
+                if (!char.IsWhiteSpace(template[close]))
+                    return false;
+
+                close++;
+            }
+
+            if (close >= template.Length || template[close] != '"')
+                return false;
+
+            start = open;
+            end = close + 1;
+        }
+        else if (!IsWholeToken(template, use))
+        {
+            return false;
+        }
+
+        var cursor = start - 1;
+        while (cursor >= 0 && char.IsWhiteSpace(template[cursor]))
+            cursor--;
+
+        if (cursor >= 0)
+        {
+            var tokenEnd = cursor + 1;
+            var tokenStart = cursor;
+            while (tokenStart > 0 && !char.IsWhiteSpace(template[tokenStart - 1]))
+                tokenStart--;
+
+            if (template[tokenStart] == '-' && tokenEnd - tokenStart > 1)
+                start = tokenStart;
+        }
+
+        if (start > 0 && char.IsWhiteSpace(template[start - 1]))
+        {
+            while (start > 0 && char.IsWhiteSpace(template[start - 1]))
+                start--;
+        }
+        else
+        {
+            while (end < template.Length && char.IsWhiteSpace(template[end]))
+                end++;
+        }
+
+        return true;
+    }
+
+    internal static string ApplyRemovals(string template, IReadOnlyList<(int Start, int End)> ranges)
+    {
+        if (ranges.Count == 0)
+            return template;
+
+        var ordered = ranges.OrderBy(range => range.Start).ToArray();
+        var builder = new StringBuilder(template.Length);
+        var cursor = 0;
+        foreach (var range in ordered)
+        {
+            if (range.Start < cursor || range.End < range.Start || range.End > template.Length)
+                continue;
+
+            builder.Append(template, cursor, range.Start - cursor);
+            cursor = range.End;
+        }
+
+        builder.Append(template, cursor, template.Length - cursor);
+        return builder.ToString().Trim();
     }
 
     [GeneratedRegex(@"\{([A-Za-z_][A-Za-z0-9_]*)\}")]

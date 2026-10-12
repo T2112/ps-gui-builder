@@ -30,7 +30,19 @@ public sealed class ExecutionMessage
 
     public string? Message { get; set; }
 
-    public static ExecutionMessage ScriptMessage(string script) => new() { Kind = ExecutionKinds.Script, Script = script };
+    public Dictionary<string, string>? Secrets { get; set; }
+
+    public bool? Interactive { get; set; }
+
+    public static ExecutionMessage ScriptMessage(string script) => ScriptMessage(ScriptRequest.Plain(script));
+
+    public static ExecutionMessage ScriptMessage(ScriptRequest request) => new()
+    {
+        Kind = ExecutionKinds.Script,
+        Script = request.Script,
+        Secrets = request.Secrets.Count == 0 ? null : new Dictionary<string, string>(request.Secrets, StringComparer.Ordinal),
+        Interactive = request.Interactive ? true : null
+    };
 
     public static ExecutionMessage CancelMessage() => new() { Kind = ExecutionKinds.Cancel };
 

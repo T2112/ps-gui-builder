@@ -102,9 +102,12 @@ internal sealed class ChannelFrameTransport : IFrameTransport
 
 internal sealed class EchoInvoker : IScriptInvoker
 {
-    public Task<int> InvokeAsync(string script, IExecutionOutput output, CancellationToken cancellationToken)
+    public ScriptRequest? Last { get; private set; }
+
+    public Task<int> InvokeAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken)
     {
-        output.WriteStdout(script);
+        Last = request;
+        output.WriteStdout(request.Script);
         output.WriteStderr("err");
         return Task.FromResult(7);
     }
@@ -112,7 +115,7 @@ internal sealed class EchoInvoker : IScriptInvoker
 
 internal sealed class ThrowingInvoker : IScriptInvoker
 {
-    public Task<int> InvokeAsync(string script, IExecutionOutput output, CancellationToken cancellationToken) =>
+    public Task<int> InvokeAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("boom");
 }
 
@@ -122,7 +125,7 @@ internal sealed class BlockingInvoker : IScriptInvoker
 
     public Task Started => _started.Task;
 
-    public Task<int> InvokeAsync(string script, IExecutionOutput output, CancellationToken cancellationToken)
+    public Task<int> InvokeAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken)
     {
         _started.TrySetResult();
         var done = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);

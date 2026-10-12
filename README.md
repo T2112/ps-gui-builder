@@ -26,7 +26,7 @@ Requirements:
 
 - Windows 10 or later, for the WPF app and for elevated commands
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- Windows PowerShell 5.1, which ships with Windows, for elevated commands
+- [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows) (`pwsh`), which is the default host. A command can ask for Windows PowerShell 5.1 instead. If `pwsh` is missing, the app falls back to Windows PowerShell 5.1 and says so.
 
 From the repository root on Windows:
 
@@ -43,7 +43,9 @@ dotnet test tests/PsGuiBuilder.Tests/PsGuiBuilder.Tests.csproj
 
 The app loads `command-tree.json` from the build output (the file is copied there), from the current directory, or from `--tree path\to\command-tree.json`.
 
-Check **Run as administrator** to approve a UAC prompt and execute in an elevated PowerShell process. Leave it unchecked to run as the current user. **Run inside this app** uses the embedded PowerShell 7 engine instead of a separate process. That mode cannot elevate. Point `PSGUIBUILDER_SHELL` at another `powershell.exe` or `pwsh` if the default Windows PowerShell host is not the one you want.
+Check **Run as administrator** to approve a UAC prompt and execute in an elevated PowerShell process. Leave it unchecked to run as the current user. **Run inside this app** uses the embedded PowerShell 7 engine instead of a separate process. That mode cannot elevate, and it cannot run a command that asks for Windows PowerShell 5.1. Commands can also ask for a service sign-in before they run. A credential sign-in uses a masked dialog; the password is not shown in the preview or the output pane and is not saved. Point `PSGUIBUILDER_SHELL` at a PowerShell 7 executable if you do not want the app to search for `pwsh`. A command that sets `"shell": "windows-powershell"` still uses Windows PowerShell 5.1.
+
+The last box on the command row looks up any installed cmdlet with `Get-Command` when it is not in `command-tree.json`.
 
 GitHub Actions builds and tests on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. The workflow does not publish releases.
 

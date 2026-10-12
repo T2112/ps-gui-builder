@@ -17,17 +17,23 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
     }
 
-    public async Task<int> InvokeAsync(string script, IExecutionOutput output, CancellationToken cancellationToken)
+    public async Task<int> InvokeAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken)
     {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
         if (output is null)
             throw new ArgumentNullException(nameof(output));
 
+        var hasSecrets = request.Secrets.Count > 0;
+        var arguments = request.Interactive
+            ? _shell.Arguments.Replace(" -NonInteractive", "", StringComparison.Ordinal)
+            : _shell.Arguments;
         var startInfo = new ProcessStartInfo
         {
             FileName = _shell.FileName,
-            Arguments = _shell.Arguments,
+            Arguments = arguments,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = !request.Interactive,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = _shell.Encoding,
@@ -38,25 +44,29 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
         if (!string.IsNullOrEmpty(profile) && Directory.Exists(profile))
             startInfo.WorkingDirectory = profile;
 
+        var script = hasSecrets ? SecretPrologue.Apply(request.Script, request.Secrets) : request.Script;
         string? tempFile = null;
-        if (_shell.Delivery == ScriptDelivery.StandardInput)
+        var standardInput = _shell.Delivery == ScriptDelivery.StandardInput || hasSecrets;
+        if (standardInput)
         {
             startInfo.RedirectStandardInput = true;
             startInfo.StandardInputEncoding = _shell.Encoding;
+            if (hasSecrets)
+                startInfo.Arguments = arguments + " -Command -";
         }
         else
         {
             var encoded = PowerShellCommandEncoding.ToEncodedCommand(script);
             if (encoded.Length <= MaxEncodedCommandLength)
             {
-                startInfo.Arguments = _shell.Arguments + " -EncodedCommand " + encoded;
+                startInfo.Arguments = arguments + " -EncodedCommand " + encoded;
             }
             else
             {
                 tempFile = Path.Combine(Path.GetTempPath(), "PsGuiBuilder-" + Guid.NewGuid().ToString("N") + ".ps1");
                 await File.WriteAllTextAsync(tempFile, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), cancellationToken)
                     .ConfigureAwait(false);
-                startInfo.Arguments = _shell.Arguments + " -File " + QuoteArgument(tempFile);
+                startInfo.Arguments = arguments + " -File " + QuoteArgument(tempFile);
             }
         }
 
@@ -72,7 +82,7 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
             stdout = PumpAsync(process.StandardOutput, output.WriteStdout, cancellationToken);
             stderr = PumpAsync(process.StandardError, output.WriteStderr, cancellationToken);
 
-            if (_shell.Delivery == ScriptDelivery.StandardInput)
+            if (standardInput)
             {
                 await process.StandardInput.WriteAsync(script.AsMemory(), cancellationToken).ConfigureAwait(false);
                 process.StandardInput.Close();

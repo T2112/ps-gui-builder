@@ -3,6 +3,7 @@
 // Not related to any employment.
 
 using System.Windows;
+using PsGuiBuilder.Core.Building;
 using PsGuiBuilder.Core.CommandTree;
 using PsGuiBuilder.Execution;
 using PsGuiBuilder.ViewModels;
@@ -27,7 +28,7 @@ public partial class App : Application
             var tree = CommandTreeLoader.LoadFile(path);
             var window = new MainWindow
             {
-                DataContext = new MainViewModel(tree, new CommandExecutionService())
+                DataContext = new MainViewModel(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog())
             };
             MainWindow = window;
             window.Show();

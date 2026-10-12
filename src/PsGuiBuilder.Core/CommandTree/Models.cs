@@ -7,7 +7,25 @@ namespace PsGuiBuilder.Core.CommandTree;
 public enum ParameterType
 {
     String,
-    Choice
+    Choice,
+    Switch,
+    Bool,
+    Int,
+    Number,
+    SecureString,
+    Array
+}
+
+public enum PowerShellEdition
+{
+    PowerShell7,
+    WindowsPowerShell5
+}
+
+public enum SignInMode
+{
+    Interactive,
+    Credential
 }
 
 public sealed class CommandParameter
@@ -45,6 +63,27 @@ public sealed class CommandParameter
     public IReadOnlyList<string> Choices { get; }
 }
 
+public sealed class SignInRequirement
+{
+    public const string SecretKey = "signin";
+
+    public SignInRequirement(string service, SignInMode mode, string prompt, string command)
+    {
+        Service = service;
+        Mode = mode;
+        Prompt = prompt;
+        Command = command;
+    }
+
+    public string Service { get; }
+
+    public SignInMode Mode { get; }
+
+    public string Prompt { get; }
+
+    public string Command { get; }
+}
+
 public sealed class CommandDefinition
 {
     public CommandDefinition(
@@ -56,7 +95,9 @@ public sealed class CommandDefinition
         bool requiresAdmin,
         string template,
         string sentence,
-        IReadOnlyList<CommandParameter> parameters)
+        IReadOnlyList<CommandParameter> parameters,
+        PowerShellEdition shell = PowerShellEdition.PowerShell7,
+        SignInRequirement? signIn = null)
     {
         Name = name;
         Path = path;
@@ -67,6 +108,8 @@ public sealed class CommandDefinition
         Template = template;
         Sentence = sentence;
         Parameters = parameters;
+        Shell = shell;
+        SignIn = signIn;
     }
 
     public string Name { get; }
@@ -87,6 +130,10 @@ public sealed class CommandDefinition
 
     public IReadOnlyList<CommandParameter> Parameters { get; }
 
+    public PowerShellEdition Shell { get; }
+
+    public SignInRequirement? SignIn { get; }
+
     public string PathDisplay => string.Join("  →  ", Path);
 
     public string Summary
@@ -97,6 +144,9 @@ public sealed class CommandDefinition
             if (!string.IsNullOrEmpty(Module))
                 parts.Add("module " + Module);
             parts.Add(RequiresAdmin ? "administrator" : "current user");
+            parts.Add(Shell == PowerShellEdition.WindowsPowerShell5 ? "Windows PowerShell 5.1" : "PowerShell 7");
+            if (SignIn is not null)
+                parts.Add("sign in to " + SignIn.Service);
             return string.Join("  ·  ", parts);
         }
     }
