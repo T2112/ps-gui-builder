@@ -73,4 +73,4 @@ The .NET 8 WPF scaffold loads `command-tree.json`, searches through cascading bo
 
 ## License
 
-See LICENSE file. MIT License, Copyright Thomas Schueler.
+See LICENSE file. MIT License, Copyright Thomas Schueler. Personal side project, built on personal time with personal equipment. No employer resources were used.

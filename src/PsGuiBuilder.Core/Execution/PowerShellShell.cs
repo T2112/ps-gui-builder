@@ -42,6 +42,9 @@ public sealed class PowerShellShell
     {
         var name = Path.GetFileName(fileName);
         var windowsPowerShell = name.Equals("powershell.exe", StringComparison.OrdinalIgnoreCase);
+        // Stdin and -EncodedCommand for Windows PowerShell stay UTF-16.
+        // Captured stdout and stderr are decoded by ProcessOutputText, because
+        // powershell.exe writes UTF-16 or UTF-8 depending on the code page.
         var encoding = windowsPowerShell
             ? Encoding.Unicode
             : new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);

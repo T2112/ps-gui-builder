@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Personal project — Thomas Schueler, personal time and equipment only.
+Personal project — Thomas Schueler, personal time and equipment only. Personal side project. No employer resources were used.
 
 ## Tech Stack Recommendation
 
@@ -34,7 +34,7 @@ The `command-tree.json` drives the entire cascading menus and parameter forms. A
 
 The desktop app creates the pipe before the helper starts. The access list allows the current user and Administrators. Messages are length-prefixed UTF-8 JSON: `script`, `stdout`, `stderr`, `exit`, `error`, `cancel`, and `cancelled`. Cancel is a message, because a non-elevated process cannot reliably kill an elevated one. If the user declines the UAC prompt, the run is treated as cancelled. The script is sent through the pipe, not placed on the command line.
 
-The helper runs PowerShell 7 (`pwsh`) unless the command sets `"shell": "windows-powershell"`, which forces Windows PowerShell 5.1 for snap-ins such as on-premises Exchange. If `pwsh` is not installed, the run falls back to Windows PowerShell 5.1 and the output pane says so. `PSGUIBUILDER_SHELL` can point at a specific PowerShell 7 executable; it does not override a command that asks for 5.1. `powershell.exe` output is decoded as UTF-16; `pwsh` is decoded as UTF-8. The script sets `$ErrorActionPreference = 'Stop'` and `$ProgressPreference = 'SilentlyContinue'`, and imports `module` when the command defines one.
+The helper runs PowerShell 7 (`pwsh`) unless the command sets `"shell": "windows-powershell"`, which forces Windows PowerShell 5.1 for snap-ins such as on-premises Exchange. If `pwsh` is not installed, the run falls back to Windows PowerShell 5.1 and the output pane says so. `PSGUIBUILDER_SHELL` can point at a specific PowerShell 7 executable; it does not override a command that asks for 5.1. Captured stdout and stderr are decoded as UTF-16 LE when the bytes start with a BOM or when at least three quarters of the odd bytes are NUL, which is Windows PowerShell writing Unicode. Otherwise they are decoded as UTF-8, which covers `pwsh` and `powershell.exe` when the console code page is UTF-8. Script text sent to `powershell.exe` on standard input stays UTF-16. The script sets `$ErrorActionPreference = 'Stop'` and `$ProgressPreference = 'SilentlyContinue'`, and imports `module` when the command defines one.
 
 Delivery is `-EncodedCommand`, or a temporary `.ps1` when that would be very long. A run that carries a secure string or a sign-in password does not use either of those. The secret is sent on the named pipe as its own field, then written only to the PowerShell process standard input as a `ConvertTo-SecureString` prologue. It is not placed on the command line, not written to a script file, and not copied into the preview or the output pane. The command text references `$__psgui_secret_<name>`. In-process runs put the same value in a `SecureString` variable and never add the characters to the script. Secrets shorter than 4 characters are still kept out of the preview and the script; they are not scrubbed from later cmdlet output, because a one-letter password would match unrelated text.
 
