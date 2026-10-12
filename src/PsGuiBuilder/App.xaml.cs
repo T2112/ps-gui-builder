@@ -34,6 +34,7 @@ public partial class App : Application
             var tree = CommandTreeLoader.LoadFile(path);
             var window = new MainWindow
             {
+                LoadedTreePath = path,
                 DataContext = new MainViewModel(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog())
             };
             MainWindow = window;

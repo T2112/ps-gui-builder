@@ -14,14 +14,12 @@ public class CommandTreeLoaderTests
     {
         var tree = CommandTreeLoader.LoadFile(Repo.CommandTreePath());
 
-        Assert.Equal("0.1", tree.Version);
-        Assert.Equal(
-            new[] { "Edit Exchange Settings", "Map a Network Drive", "Manage Users and Groups" },
-            tree.Root.Children.Select(child => child.Name).ToArray());
+        Assert.Equal("0.2", tree.Version);
+        Assert.Equal(15, tree.Root.Children.Count);
+        Assert.Contains(tree.Root.Children, child => child.Name == "Exchange Online");
 
-        var online = tree.Root.Children[0].Children[0];
-        Assert.Equal("On Exchange Online", online.Name);
-        var add = online.Children[0].Command;
+        var exchange = tree.Root.Children.Single(child => child.Name == "Exchange Online");
+        var add = exchange.Children.Single(child => child.Name == "Add Mailbox Folder Permission").Command;
         Assert.NotNull(add);
         Assert.Equal("Add-MailboxFolderPermission", add!.Cmdlet);
         Assert.Equal("ExchangeOnlineManagement", add.Module);
@@ -33,8 +31,9 @@ public class CommandTreeLoaderTests
         Assert.Equal(SignInMode.Interactive, add.SignIn!.Mode);
         Assert.Equal(PowerShellEdition.PowerShell7, add.Shell);
 
-        var onPrem = tree.Root.Children[0].Children[1].Children[0].Command;
-        Assert.Equal(PowerShellEdition.WindowsPowerShell5, onPrem!.Shell);
+        var onPrem = exchange.Children.Single(child => child.Name == "On-premises").Children[0].Command;
+        Assert.Equal("Add Mailbox Folder Permission (On-Prem)", onPrem!.Name);
+        Assert.Equal(PowerShellEdition.WindowsPowerShell5, onPrem.Shell);
     }
 
     [Fact]

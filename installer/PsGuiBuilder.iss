@@ -27,6 +27,7 @@ DefaultDirName={autopf}\PsGuiBuilder
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile={#RepoRoot}\LICENSE
+SetupIconFile={#RepoRoot}\src\PsGuiBuilder\Assets\PsGuiBuilder.ico
 OutputDir={#RepoRoot}\artifacts
 OutputBaseFilename=PsGuiBuilder-Setup-{#AppVersion}
 Compression=lzma2
@@ -52,9 +53,9 @@ Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\PsGuiBuilder.exe"
+Name: "{group}\{#AppName}"; Filename: "{app}\PsGuiBuilder.exe"; IconFilename: "{app}\PsGuiBuilder.exe"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\PsGuiBuilder.exe"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\PsGuiBuilder.exe"; IconFilename: "{app}\PsGuiBuilder.exe"; Tasks: desktopicon
 
 [Code]
 procedure SeedUserCommandTree();

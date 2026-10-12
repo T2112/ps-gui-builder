@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:PsGuiBuilder.Controls"
         xmlns:vm="clr-namespace:PsGuiBuilder.ViewModels"
         Title="PowerShell GUI Command Builder"
+        Icon="Assets/PsGuiBuilder.ico"
         Width="1120"
         Height="780"
         MinWidth="880"
@@ -288,7 +289,13 @@
           <Button Content="Start over"
                   Command="{Binding StartOverCommand}"
                   Style="{StaticResource SecondaryButton}"
-                  Margin="0,0,16,8" />
+                  Margin="0,0,8,8" />
+          <Button Content="Load new default commands"
+                  Click="LoadNewDefaultCommands"
+                  Style="{StaticResource SecondaryButton}"
+                  IsEnabled="{Binding IsIdle}"
+                  Margin="0,0,16,8"
+                  ToolTip="Adds commands from the installed default tree that are missing in %APPDATA%\PsGuiBuilder\command-tree.json. Entries you already edited stay as they are." />
           <CheckBox Content="Run as administrator"
                     IsChecked="{Binding RunElevated}"
                     IsEnabled="{Binding IsIdle}"

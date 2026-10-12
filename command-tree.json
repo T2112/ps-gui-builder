@@ -1,145 +1,397 @@
 {
-  "version": "0.1",
-  "description": "Command tree for PowerShell GUI builder. Expand with real categories and cmdlets. Parameter types include string, choice, switch, bool, int, number, securestring, and array. All development personal time/equipment.",
+  "version": "0.2",
+  "description": "Default commands for the personal PowerShell GUI Command Builder by Thomas Schueler. Personal side project, built on personal time with personal equipment. No employer resources.",
   "categories": {
-    "Edit Exchange Settings": {
-      "description": "Manage Exchange Online or on-premises mailbox and folder permissions",
+    "Files and folders": {
+      "description": "List, copy, move, and inspect files",
       "options": {
-        "On Exchange Online": {
-          "options": {
-            "Add Mailbox Folder Permission": {
-              "cmdlet": "Add-MailboxFolderPermission",
-              "module": "ExchangeOnlineManagement",
-              "requiresAdmin": true,
-              "shell": "pwsh",
-              "signIn": {
-                "service": "Exchange Online",
-                "mode": "interactive",
-                "prompt": "Sign in to Exchange Online. A browser window will open.",
-                "command": "Connect-ExchangeOnline -ShowBanner:$false"
-              },
-              "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
-              "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder}",
-              "parameters": [
-                {
-                  "name": "owner",
-                  "label": "owner user",
-                  "type": "string",
-                  "placeholder": "owner@yourdomain.com",
-                  "required": true
-                },
-                {
-                  "name": "folder",
-                  "label": "folder",
-                  "type": "choice",
-                  "choices": ["Calendar", "Inbox", "Contacts", "Tasks", "Notes"],
-                  "default": "Calendar",
-                  "required": true
-                },
-                {
-                  "name": "delegate",
-                  "label": "delegate user",
-                  "type": "string",
-                  "placeholder": "delegate@yourdomain.com",
-                  "required": true
-                },
-                {
-                  "name": "rights",
-                  "label": "permission level",
-                  "type": "choice",
-                  "choices": ["Owner", "PublishingEditor", "Editor", "PublishingAuthor", "Author", "NonEditingAuthor", "Reviewer", "Contributor", "AvailabilityOnly", "LimitedDetails", "None"],
-                  "default": "Editor",
-                  "required": true
-                }
-              ]
+        "List a folder": {
+          "cmdlet": "Get-ChildItem",
+          "requiresAdmin": false,
+          "template": "Get-ChildItem -Path \"{path}\" {Recurse} {Force}",
+          "sentence": "I want the contents of {path}, recurse {Recurse}, hidden {Force}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "folder",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Users"
             },
-            "Remove Mailbox Folder Permission": {
-              "cmdlet": "Remove-MailboxFolderPermission",
-              "module": "ExchangeOnlineManagement",
-              "requiresAdmin": true,
-              "signIn": {
-                "service": "Exchange Online",
-                "mode": "interactive",
-                "prompt": "Sign in to Exchange Online. A browser window will open.",
-                "command": "Connect-ExchangeOnline -ShowBanner:$false"
-              },
-              "template": "Remove-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\"",
-              "sentence": "I want to remove {delegate}'s permissions from {owner}'s {folder}",
-              "parameters": [
-                {
-                  "name": "owner",
-                  "label": "owner user",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "folder",
-                  "label": "folder",
-                  "type": "choice",
-                  "choices": ["Calendar", "Inbox", "Contacts", "Tasks"],
-                  "default": "Calendar",
-                  "required": true
-                },
-                {
-                  "name": "delegate",
-                  "label": "delegate user",
-                  "type": "string",
-                  "required": true
-                }
-              ]
+            {
+              "name": "Recurse",
+              "label": "include subfolders",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            },
+            {
+              "name": "Force",
+              "label": "include hidden items",
+              "type": "switch",
+              "required": false,
+              "default": "false"
             }
-          }
+          ]
         },
-        "On a Network Server": {
-          "options": {
-            "Add Mailbox Folder Permission (On-Prem)": {
-              "cmdlet": "Add-MailboxFolderPermission",
-              "requiresAdmin": true,
-              "shell": "windows-powershell",
-              "signIn": {
-                "service": "Exchange on-premises",
-                "mode": "interactive",
-                "prompt": "This command runs in Windows PowerShell 5.1 and loads the on-premises Exchange snap-in.",
-                "command": "Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn"
-              },
-              "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
-              "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder} (on-prem)",
-              "parameters": [
-                {
-                  "name": "owner",
-                  "label": "owner user",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "folder",
-                  "label": "folder",
-                  "type": "string",
-                  "default": "Calendar",
-                  "required": true
-                },
-                {
-                  "name": "delegate",
-                  "label": "delegate user",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "rights",
-                  "label": "permission level",
-                  "type": "choice",
-                  "choices": ["Editor", "Author", "Reviewer", "Owner"],
-                  "default": "Editor",
-                  "required": true
-                }
-              ]
+        "Copy an item": {
+          "cmdlet": "Copy-Item",
+          "requiresAdmin": false,
+          "template": "Copy-Item -Path \"{path}\" -Destination \"{destination}\" {Recurse}",
+          "sentence": "I want to copy {path} to {destination}, recurse {Recurse}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "source",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Source"
+            },
+            {
+              "name": "destination",
+              "label": "destination",
+              "type": "string",
+              "required": true,
+              "placeholder": "D:\\Backup"
+            },
+            {
+              "name": "Recurse",
+              "label": "include subfolders",
+              "type": "switch",
+              "required": false,
+              "default": "false"
             }
-          }
+          ]
+        },
+        "Move an item": {
+          "cmdlet": "Move-Item",
+          "requiresAdmin": false,
+          "template": "Move-Item -Path \"{path}\" -Destination \"{destination}\"",
+          "sentence": "I want to move {path} to {destination}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "source",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "destination",
+              "label": "destination",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Remove an item": {
+          "cmdlet": "Remove-Item",
+          "requiresAdmin": false,
+          "template": "Remove-Item -Path \"{path}\" {Recurse} {Force}",
+          "sentence": "I want to remove {path}, recurse {Recurse}, force {Force}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "path",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "Recurse",
+              "label": "include subfolders",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            },
+            {
+              "name": "Force",
+              "label": "force",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "Create a folder": {
+          "cmdlet": "New-Item",
+          "requiresAdmin": false,
+          "template": "New-Item -Path \"{path}\" -ItemType Directory",
+          "sentence": "I want a new folder at {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "folder path",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Temp\\NewFolder"
+            }
+          ]
+        },
+        "Search file content": {
+          "cmdlet": "Select-String",
+          "requiresAdmin": false,
+          "template": "Select-String -Path \"{path}\" -Pattern \"{pattern}\"",
+          "sentence": "I want lines in {path} that match {pattern}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "files",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Logs\\*.log"
+            },
+            {
+              "name": "pattern",
+              "label": "pattern",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Show permissions": {
+          "cmdlet": "Get-Acl",
+          "requiresAdmin": false,
+          "template": "Get-Acl -Path \"{path}\"",
+          "sentence": "I want the access list of {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "path",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Hash a file": {
+          "cmdlet": "Get-FileHash",
+          "requiresAdmin": false,
+          "template": "Get-FileHash -Path \"{path}\" -Algorithm {algorithm}",
+          "sentence": "I want the {algorithm} hash of {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "file",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "algorithm",
+              "label": "algorithm",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "SHA256",
+                "SHA384",
+                "SHA512",
+                "SHA1",
+                "MD5"
+              ],
+              "default": "SHA256"
+            }
+          ]
         }
       }
     },
-    "Map a Network Drive": {
-      "description": "Map or remove network drives",
+    "Processes": {
+      "description": "See and control running programs",
+      "options": {
+        "List processes": {
+          "cmdlet": "Get-Process",
+          "requiresAdmin": false,
+          "template": "Get-Process -Name \"{name}\"",
+          "sentence": "I want processes named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "process name",
+              "type": "string",
+              "required": false,
+              "placeholder": "notepad"
+            }
+          ]
+        },
+        "Stop a process by id": {
+          "cmdlet": "Stop-Process",
+          "requiresAdmin": true,
+          "template": "Stop-Process -Id {id} {Force}",
+          "sentence": "I want to stop process {id}, force {Force}",
+          "parameters": [
+            {
+              "name": "id",
+              "label": "process id",
+              "type": "int",
+              "required": true
+            },
+            {
+              "name": "Force",
+              "label": "force",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "Stop processes by name": {
+          "cmdlet": "Stop-Process",
+          "requiresAdmin": true,
+          "template": "Stop-Process -Name {names} {Force}",
+          "sentence": "I want to stop processes {names}, force {Force}",
+          "parameters": [
+            {
+              "name": "names",
+              "label": "process names",
+              "type": "array",
+              "required": true
+            },
+            {
+              "name": "Force",
+              "label": "force",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "Start a program": {
+          "cmdlet": "Start-Process",
+          "requiresAdmin": false,
+          "template": "Start-Process -FilePath \"{path}\" -ArgumentList \"{arguments}\"",
+          "sentence": "I want to start {path} with arguments {arguments}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "program",
+              "type": "string",
+              "required": true,
+              "placeholder": "notepad.exe"
+            },
+            {
+              "name": "arguments",
+              "label": "arguments",
+              "type": "string",
+              "required": false
+            }
+          ]
+        },
+        "Wait for a process": {
+          "cmdlet": "Wait-Process",
+          "requiresAdmin": false,
+          "template": "Wait-Process -Name \"{name}\" -Timeout {seconds}",
+          "sentence": "I want to wait up to {seconds} seconds for {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "process name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "seconds",
+              "label": "seconds",
+              "type": "int",
+              "required": true,
+              "default": "30"
+            }
+          ]
+        }
+      }
+    },
+    "Services": {
+      "description": "Windows services",
+      "options": {
+        "List services": {
+          "cmdlet": "Get-Service",
+          "requiresAdmin": false,
+          "template": "Get-Service -Name \"{name}\"",
+          "sentence": "I want services named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service name",
+              "type": "string",
+              "required": false,
+              "placeholder": "Spooler"
+            }
+          ]
+        },
+        "Start a service": {
+          "cmdlet": "Start-Service",
+          "requiresAdmin": true,
+          "template": "Start-Service -Name \"{name}\"",
+          "sentence": "I want to start the {name} service",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service name",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Stop a service": {
+          "cmdlet": "Stop-Service",
+          "requiresAdmin": true,
+          "template": "Stop-Service -Name \"{name}\" {Force}",
+          "sentence": "I want to stop the {name} service, force {Force}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "Force",
+              "label": "force",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "Restart a service": {
+          "cmdlet": "Restart-Service",
+          "requiresAdmin": true,
+          "template": "Restart-Service -Name \"{name}\"",
+          "sentence": "I want to restart the {name} service",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service name",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Set service startup": {
+          "cmdlet": "Set-Service",
+          "requiresAdmin": true,
+          "template": "Set-Service -Name \"{name}\" -StartupType {startup}",
+          "sentence": "I want the {name} service to start as {startup}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "startup",
+              "label": "startup type",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Automatic",
+                "Manual",
+                "Disabled"
+              ],
+              "default": "Automatic"
+            }
+          ]
+        }
+      }
+    },
+    "Networking": {
+      "description": "Addresses, names, firewall, shares, and mapped drives",
       "options": {
         "Map New Drive": {
           "cmdlet": "New-PSDrive",
@@ -151,22 +403,22 @@
               "name": "driveLetter",
               "label": "drive letter",
               "type": "string",
-              "placeholder": "Z",
-              "required": true
+              "required": true,
+              "placeholder": "Z"
             },
             {
               "name": "uncPath",
               "label": "UNC path",
               "type": "string",
-              "placeholder": "\\\\server\\share",
-              "required": true
+              "required": true,
+              "placeholder": "\\\\server\\share"
             },
             {
               "name": "Persist",
               "label": "keep the drive",
               "type": "switch",
-              "default": "true",
-              "required": false
+              "required": false,
+              "default": "true"
             },
             {
               "name": "description",
@@ -175,22 +427,936 @@
               "required": false
             }
           ]
+        },
+        "Remove a mapped drive": {
+          "cmdlet": "Remove-PSDrive",
+          "requiresAdmin": false,
+          "template": "Remove-PSDrive -Name \"{name}\"",
+          "sentence": "I want to disconnect drive {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "drive letter",
+              "type": "string",
+              "required": true,
+              "placeholder": "Z"
+            }
+          ]
+        },
+        "Test a connection": {
+          "cmdlet": "Test-Connection",
+          "requiresAdmin": false,
+          "template": "Test-Connection -TargetName \"{target}\" -Count {count}",
+          "sentence": "I want to ping {target} {count} times",
+          "parameters": [
+            {
+              "name": "target",
+              "label": "host",
+              "type": "string",
+              "required": true,
+              "placeholder": "example.com"
+            },
+            {
+              "name": "count",
+              "label": "count",
+              "type": "int",
+              "required": true,
+              "default": "4"
+            }
+          ]
+        },
+        "Resolve a DNS name": {
+          "cmdlet": "Resolve-DnsName",
+          "requiresAdmin": false,
+          "template": "Resolve-DnsName -Name \"{name}\" -Type {type}",
+          "sentence": "I want the {type} record for {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "name",
+              "type": "string",
+              "required": true,
+              "placeholder": "example.com"
+            },
+            {
+              "name": "type",
+              "label": "record type",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "A",
+                "AAAA",
+                "CNAME",
+                "MX",
+                "TXT",
+                "NS",
+                "PTR"
+              ],
+              "default": "A"
+            }
+          ],
+          "module": "DnsClient"
+        },
+        "Show IP addresses": {
+          "cmdlet": "Get-NetIPAddress",
+          "requiresAdmin": false,
+          "template": "Get-NetIPAddress -InterfaceAlias \"{alias}\"",
+          "sentence": "I want IP addresses on {alias}",
+          "parameters": [
+            {
+              "name": "alias",
+              "label": "adapter",
+              "type": "string",
+              "required": false,
+              "placeholder": "Ethernet"
+            }
+          ],
+          "module": "NetTCPIP"
+        },
+        "List network adapters": {
+          "cmdlet": "Get-NetAdapter",
+          "requiresAdmin": false,
+          "template": "Get-NetAdapter",
+          "sentence": "I want the network adapters on this computer",
+          "parameters": [],
+          "module": "NetAdapter"
+        },
+        "Show TCP connections": {
+          "cmdlet": "Get-NetTCPConnection",
+          "requiresAdmin": false,
+          "template": "Get-NetTCPConnection -State {state}",
+          "sentence": "I want TCP connections in state {state}",
+          "parameters": [
+            {
+              "name": "state",
+              "label": "state",
+              "type": "choice",
+              "required": false,
+              "choices": [
+                "Listen",
+                "Established",
+                "TimeWait",
+                "CloseWait",
+                "SynSent"
+              ]
+            }
+          ],
+          "module": "NetTCPIP"
+        },
+        "Add a firewall rule": {
+          "cmdlet": "New-NetFirewallRule",
+          "requiresAdmin": true,
+          "template": "New-NetFirewallRule -DisplayName \"{name}\" -Direction {direction} -Action {action} -Protocol {protocol} -LocalPort \"{port}\"",
+          "sentence": "I want a firewall rule {name} for {direction} {action} {protocol} port {port}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "rule name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "direction",
+              "label": "direction",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Inbound",
+                "Outbound"
+              ],
+              "default": "Inbound"
+            },
+            {
+              "name": "action",
+              "label": "action",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Allow",
+                "Block"
+              ],
+              "default": "Allow"
+            },
+            {
+              "name": "protocol",
+              "label": "protocol",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "TCP",
+                "UDP"
+              ],
+              "default": "TCP"
+            },
+            {
+              "name": "port",
+              "label": "local port",
+              "type": "string",
+              "required": true,
+              "placeholder": "443"
+            }
+          ],
+          "module": "NetSecurity"
+        },
+        "List SMB shares": {
+          "cmdlet": "Get-SmbShare",
+          "requiresAdmin": false,
+          "template": "Get-SmbShare",
+          "sentence": "I want the SMB shares on this computer",
+          "parameters": [],
+          "module": "SmbShare"
+        },
+        "Create an SMB share": {
+          "cmdlet": "New-SmbShare",
+          "requiresAdmin": true,
+          "template": "New-SmbShare -Name \"{name}\" -Path \"{path}\"",
+          "sentence": "I want to share {path} as {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "share name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "path",
+              "label": "folder",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "SmbShare"
         }
       }
     },
-    "Manage Users and Groups": {
-      "description": "Active Directory or local user/group operations",
+    "Disks and storage": {
+      "description": "Disks, volumes, and the recycle bin",
+      "options": {
+        "List disks": {
+          "cmdlet": "Get-Disk",
+          "requiresAdmin": false,
+          "template": "Get-Disk",
+          "sentence": "I want the disks on this computer",
+          "parameters": [],
+          "module": "Storage"
+        },
+        "List volumes": {
+          "cmdlet": "Get-Volume",
+          "requiresAdmin": false,
+          "template": "Get-Volume -DriveLetter {letter}",
+          "sentence": "I want the volume for drive {letter}",
+          "parameters": [
+            {
+              "name": "letter",
+              "label": "drive letter",
+              "type": "string",
+              "required": false,
+              "placeholder": "C"
+            }
+          ],
+          "module": "Storage"
+        },
+        "List partitions": {
+          "cmdlet": "Get-Partition",
+          "requiresAdmin": false,
+          "template": "Get-Partition -DriveLetter {letter}",
+          "sentence": "I want partitions for drive {letter}",
+          "parameters": [
+            {
+              "name": "letter",
+              "label": "drive letter",
+              "type": "string",
+              "required": false,
+              "placeholder": "C"
+            }
+          ],
+          "module": "Storage"
+        },
+        "List physical disks": {
+          "cmdlet": "Get-PhysicalDisk",
+          "requiresAdmin": false,
+          "template": "Get-PhysicalDisk",
+          "sentence": "I want the physical disks on this computer",
+          "parameters": [],
+          "module": "Storage"
+        },
+        "List PowerShell drives": {
+          "cmdlet": "Get-PSDrive",
+          "requiresAdmin": false,
+          "template": "Get-PSDrive -Name \"{name}\"",
+          "sentence": "I want PowerShell drives named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "name",
+              "type": "string",
+              "required": false
+            }
+          ]
+        },
+        "Empty the recycle bin": {
+          "cmdlet": "Clear-RecycleBin",
+          "requiresAdmin": false,
+          "template": "Clear-RecycleBin -DriveLetter {letter} {Force}",
+          "sentence": "I want to empty the recycle bin on {letter}, force {Force}",
+          "parameters": [
+            {
+              "name": "letter",
+              "label": "drive letter",
+              "type": "string",
+              "required": true,
+              "placeholder": "C"
+            },
+            {
+              "name": "Force",
+              "label": "skip the prompt",
+              "type": "switch",
+              "required": false,
+              "default": "true"
+            }
+          ]
+        },
+        "Scan a volume": {
+          "cmdlet": "Repair-Volume",
+          "requiresAdmin": true,
+          "template": "Repair-Volume -DriveLetter {letter} {Scan}",
+          "sentence": "I want to scan drive {letter}, online scan {Scan}",
+          "parameters": [
+            {
+              "name": "letter",
+              "label": "drive letter",
+              "type": "string",
+              "required": true,
+              "placeholder": "C"
+            },
+            {
+              "name": "Scan",
+              "label": "scan only",
+              "type": "switch",
+              "required": false,
+              "default": "true"
+            }
+          ],
+          "module": "Storage"
+        }
+      }
+    },
+    "Event logs": {
+      "description": "Read and clear Windows event logs",
+      "options": {
+        "Recent events": {
+          "cmdlet": "Get-WinEvent",
+          "requiresAdmin": false,
+          "template": "Get-WinEvent -LogName \"{log}\" -MaxEvents {count}",
+          "sentence": "I want {count} recent events from {log}",
+          "parameters": [
+            {
+              "name": "log",
+              "label": "log name",
+              "type": "string",
+              "required": true,
+              "placeholder": "System",
+              "default": "System"
+            },
+            {
+              "name": "count",
+              "label": "count",
+              "type": "int",
+              "required": true,
+              "default": "50"
+            }
+          ]
+        },
+        "Events by id": {
+          "cmdlet": "Get-WinEvent",
+          "requiresAdmin": false,
+          "template": "Get-WinEvent -LogName \"{log}\" -MaxEvents {count} | Where-Object -Property Id -EQ {id}",
+          "sentence": "I want event id {id} from {log}, up to {count}",
+          "parameters": [
+            {
+              "name": "log",
+              "label": "log name",
+              "type": "string",
+              "required": true,
+              "default": "System"
+            },
+            {
+              "name": "id",
+              "label": "event id",
+              "type": "int",
+              "required": true
+            },
+            {
+              "name": "count",
+              "label": "count",
+              "type": "int",
+              "required": true,
+              "default": "20"
+            }
+          ]
+        },
+        "Classic event log": {
+          "cmdlet": "Get-EventLog",
+          "requiresAdmin": false,
+          "template": "Get-EventLog -LogName \"{log}\" -Newest {count}",
+          "sentence": "I want {count} classic events from {log}",
+          "parameters": [
+            {
+              "name": "log",
+              "label": "log",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Application",
+                "System",
+                "Security"
+              ],
+              "default": "Application"
+            },
+            {
+              "name": "count",
+              "label": "count",
+              "type": "int",
+              "required": true,
+              "default": "50"
+            }
+          ],
+          "shell": "windows-powershell"
+        },
+        "Clear a classic log": {
+          "cmdlet": "Clear-EventLog",
+          "requiresAdmin": true,
+          "template": "Clear-EventLog -LogName \"{log}\"",
+          "sentence": "I want to clear the classic {log} log",
+          "parameters": [
+            {
+              "name": "log",
+              "label": "log",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Application",
+                "System"
+              ],
+              "default": "Application"
+            }
+          ],
+          "shell": "windows-powershell"
+        }
+      }
+    },
+    "Users and groups": {
+      "description": "Local Windows accounts",
+      "options": {
+        "List local users": {
+          "cmdlet": "Get-LocalUser",
+          "requiresAdmin": false,
+          "template": "Get-LocalUser -Name \"{name}\"",
+          "sentence": "I want local users named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "user name",
+              "type": "string",
+              "required": false
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Create a local user": {
+          "cmdlet": "New-LocalUser",
+          "requiresAdmin": true,
+          "template": "New-LocalUser -Name \"{name}\" -Password {password} {PasswordNeverExpires}",
+          "sentence": "I want a local user {name} with password {password}, never expires {PasswordNeverExpires}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "user name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "password",
+              "label": "password",
+              "type": "securestring",
+              "required": true
+            },
+            {
+              "name": "PasswordNeverExpires",
+              "label": "password never expires",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Add a user to a local group": {
+          "cmdlet": "Add-LocalGroupMember",
+          "requiresAdmin": true,
+          "template": "Add-LocalGroupMember -Group \"{group}\" -Member \"{member}\"",
+          "sentence": "I want to add {member} to the local group {group}",
+          "parameters": [
+            {
+              "name": "group",
+              "label": "group",
+              "type": "string",
+              "required": true,
+              "placeholder": "Administrators"
+            },
+            {
+              "name": "member",
+              "label": "member",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Disable a local user": {
+          "cmdlet": "Disable-LocalUser",
+          "requiresAdmin": true,
+          "template": "Disable-LocalUser -Name \"{name}\"",
+          "sentence": "I want to disable local user {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "user name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Enable a local user": {
+          "cmdlet": "Enable-LocalUser",
+          "requiresAdmin": true,
+          "template": "Enable-LocalUser -Name \"{name}\"",
+          "sentence": "I want to enable local user {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "user name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Rename a local user": {
+          "cmdlet": "Rename-LocalUser",
+          "requiresAdmin": true,
+          "template": "Rename-LocalUser -Name \"{name}\" -NewName \"{newName}\"",
+          "sentence": "I want to rename local user {name} to {newName}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "current name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "newName",
+              "label": "new name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        }
+      }
+    },
+    "Scheduled tasks": {
+      "description": "Task Scheduler",
+      "options": {
+        "Get a scheduled task": {
+          "cmdlet": "Get-ScheduledTask",
+          "requiresAdmin": false,
+          "template": "Get-ScheduledTask -TaskName \"{name}\"",
+          "sentence": "I want the scheduled task {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ScheduledTasks"
+        },
+        "Start a scheduled task": {
+          "cmdlet": "Start-ScheduledTask",
+          "requiresAdmin": true,
+          "template": "Start-ScheduledTask -TaskName \"{name}\"",
+          "sentence": "I want to start the scheduled task {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ScheduledTasks"
+        },
+        "Disable a scheduled task": {
+          "cmdlet": "Disable-ScheduledTask",
+          "requiresAdmin": true,
+          "template": "Disable-ScheduledTask -TaskName \"{name}\"",
+          "sentence": "I want to disable the scheduled task {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ScheduledTasks"
+        },
+        "Enable a scheduled task": {
+          "cmdlet": "Enable-ScheduledTask",
+          "requiresAdmin": true,
+          "template": "Enable-ScheduledTask -TaskName \"{name}\"",
+          "sentence": "I want to enable the scheduled task {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ScheduledTasks"
+        },
+        "Remove a scheduled task": {
+          "cmdlet": "Unregister-ScheduledTask",
+          "requiresAdmin": true,
+          "template": "Unregister-ScheduledTask -TaskName \"{name}\"",
+          "sentence": "I want to remove the scheduled task {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ScheduledTasks"
+        },
+        "Register a daily task": {
+          "cmdlet": "Register-ScheduledTask",
+          "requiresAdmin": true,
+          "template": "Register-ScheduledTask -TaskName \"{name}\" -Action (New-ScheduledTaskAction -Execute \"{program}\") -Trigger (New-ScheduledTaskTrigger -Daily -At \"{time}\")",
+          "sentence": "I want a daily task {name} that runs {program} at {time}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "task name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "program",
+              "label": "program",
+              "type": "string",
+              "required": true,
+              "placeholder": "notepad.exe"
+            },
+            {
+              "name": "time",
+              "label": "time",
+              "type": "string",
+              "required": true,
+              "placeholder": "09:00"
+            }
+          ],
+          "module": "ScheduledTasks"
+        }
+      }
+    },
+    "Registry": {
+      "description": "Read and write registry values",
+      "options": {
+        "Read a registry value": {
+          "cmdlet": "Get-ItemProperty",
+          "requiresAdmin": false,
+          "template": "Get-ItemProperty -Path \"{path}\" -Name \"{name}\"",
+          "sentence": "I want registry value {name} at {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "key",
+              "type": "string",
+              "required": true,
+              "placeholder": "HKCU:\\Software"
+            },
+            {
+              "name": "name",
+              "label": "value name",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Write a registry value": {
+          "cmdlet": "Set-ItemProperty",
+          "requiresAdmin": true,
+          "template": "Set-ItemProperty -Path \"{path}\" -Name \"{name}\" -Value \"{value}\"",
+          "sentence": "I want to set {path} value {name} to {value}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "key",
+              "type": "string",
+              "required": true,
+              "placeholder": "HKCU:\\Software"
+            },
+            {
+              "name": "name",
+              "label": "value name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "value",
+              "label": "value",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Create a registry key": {
+          "cmdlet": "New-Item",
+          "requiresAdmin": true,
+          "template": "New-Item -Path \"{path}\" -ItemType Directory",
+          "sentence": "I want a registry key at {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "key",
+              "type": "string",
+              "required": true,
+              "placeholder": "HKCU:\\Software\\PsGuiBuilder"
+            }
+          ]
+        },
+        "Remove a registry value": {
+          "cmdlet": "Remove-ItemProperty",
+          "requiresAdmin": true,
+          "template": "Remove-ItemProperty -Path \"{path}\" -Name \"{name}\"",
+          "sentence": "I want to remove value {name} from {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "key",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "name",
+              "label": "value name",
+              "type": "string",
+              "required": true
+            }
+          ]
+        }
+      }
+    },
+    "Windows Update and system info": {
+      "description": "Hotfixes, computer info, and Windows Update when PSWindowsUpdate is installed",
+      "options": {
+        "Installed hotfixes": {
+          "cmdlet": "Get-HotFix",
+          "requiresAdmin": false,
+          "template": "Get-HotFix -Id \"{id}\"",
+          "sentence": "I want hotfix {id}",
+          "parameters": [
+            {
+              "name": "id",
+              "label": "KB id",
+              "type": "string",
+              "required": false,
+              "placeholder": "KB5034123"
+            }
+          ]
+        },
+        "Computer info": {
+          "cmdlet": "Get-ComputerInfo",
+          "requiresAdmin": false,
+          "template": "Get-ComputerInfo",
+          "sentence": "I want a report of this computer",
+          "parameters": []
+        },
+        "CIM instance": {
+          "cmdlet": "Get-CimInstance",
+          "requiresAdmin": false,
+          "template": "Get-CimInstance -ClassName \"{class}\"",
+          "sentence": "I want CIM instances of {class}",
+          "parameters": [
+            {
+              "name": "class",
+              "label": "class",
+              "type": "string",
+              "required": true,
+              "placeholder": "Win32_OperatingSystem",
+              "default": "Win32_OperatingSystem"
+            }
+          ]
+        },
+        "Search Windows Update": {
+          "cmdlet": "Get-WindowsUpdate",
+          "requiresAdmin": true,
+          "template": "Get-WindowsUpdate -KBArticleID \"{kb}\"",
+          "sentence": "I want Windows Update results for {kb}",
+          "parameters": [
+            {
+              "name": "kb",
+              "label": "KB id",
+              "type": "string",
+              "required": false
+            }
+          ],
+          "description": "Requires the PSWindowsUpdate module on this computer.",
+          "module": "PSWindowsUpdate"
+        },
+        "Install a Windows update": {
+          "cmdlet": "Install-WindowsUpdate",
+          "requiresAdmin": true,
+          "template": "Install-WindowsUpdate -KBArticleID \"{kb}\" -AcceptAll {IgnoreReboot}",
+          "sentence": "I want to install update {kb}, ignore reboot {IgnoreReboot}",
+          "parameters": [
+            {
+              "name": "kb",
+              "label": "KB id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "IgnoreReboot",
+              "label": "ignore reboot",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ],
+          "description": "Requires the PSWindowsUpdate module. AcceptAll is included so the install does not prompt.",
+          "module": "PSWindowsUpdate"
+        },
+        "Build a Windows Update log": {
+          "cmdlet": "Get-WindowsUpdateLog",
+          "requiresAdmin": true,
+          "template": "Get-WindowsUpdateLog",
+          "sentence": "I want to build the Windows Update log on the desktop",
+          "parameters": []
+        }
+      }
+    },
+    "Printers": {
+      "description": "Local and shared printers",
+      "options": {
+        "List printers": {
+          "cmdlet": "Get-Printer",
+          "requiresAdmin": false,
+          "template": "Get-Printer -Name \"{name}\"",
+          "sentence": "I want printers named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "printer",
+              "type": "string",
+              "required": false
+            }
+          ],
+          "module": "PrintManagement"
+        },
+        "Add a printer": {
+          "cmdlet": "Add-Printer",
+          "requiresAdmin": true,
+          "template": "Add-Printer -Name \"{name}\" -DriverName \"{driver}\" -PortName \"{port}\"",
+          "sentence": "I want a printer {name} using driver {driver} on port {port}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "printer name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "driver",
+              "label": "driver",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "port",
+              "label": "port",
+              "type": "string",
+              "required": true,
+              "placeholder": "PORTPROMPT:"
+            }
+          ],
+          "module": "PrintManagement"
+        },
+        "Remove a printer": {
+          "cmdlet": "Remove-Printer",
+          "requiresAdmin": true,
+          "template": "Remove-Printer -Name \"{name}\"",
+          "sentence": "I want to remove printer {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "printer name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "PrintManagement"
+        },
+        "List print jobs": {
+          "cmdlet": "Get-PrintJob",
+          "requiresAdmin": false,
+          "template": "Get-PrintJob -PrinterName \"{printer}\"",
+          "sentence": "I want jobs on printer {printer}",
+          "parameters": [
+            {
+              "name": "printer",
+              "label": "printer name",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "PrintManagement"
+        },
+        "Restart a print job": {
+          "cmdlet": "Restart-PrintJob",
+          "requiresAdmin": true,
+          "template": "Restart-PrintJob -PrinterName \"{printer}\" -ID {id}",
+          "sentence": "I want to restart job {id} on {printer}",
+          "parameters": [
+            {
+              "name": "printer",
+              "label": "printer name",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "id",
+              "label": "job id",
+              "type": "int",
+              "required": true
+            }
+          ],
+          "module": "PrintManagement"
+        }
+      }
+    },
+    "Active Directory": {
+      "description": "Active Directory accounts from the RSAT module",
       "options": {
         "Add User to Group": {
           "cmdlet": "Add-ADGroupMember",
-          "module": "ActiveDirectory",
           "requiresAdmin": true,
-          "signIn": {
-            "service": "Active Directory",
-            "mode": "credential",
-            "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
-            "command": "Import-Module ActiveDirectory"
-          },
           "template": "Add-ADGroupMember -Identity \"{group}\" -Members \"{user}\" -Credential $__psgui_credential",
           "sentence": "I want to add {user} to the {group} group",
           "parameters": [
@@ -206,18 +1372,18 @@
               "type": "string",
               "required": true
             }
-          ]
-        },
-        "Add several users to a group": {
-          "cmdlet": "Add-ADGroupMember",
+          ],
           "module": "ActiveDirectory",
-          "requiresAdmin": true,
           "signIn": {
             "service": "Active Directory",
             "mode": "credential",
             "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
             "command": "Import-Module ActiveDirectory"
-          },
+          }
+        },
+        "Add several users to a group": {
+          "cmdlet": "Add-ADGroupMember",
+          "requiresAdmin": true,
           "template": "Add-ADGroupMember -Identity \"{group}\" -Members {members} -Credential $__psgui_credential",
           "sentence": "I want to add {members} to the {group} group",
           "parameters": [
@@ -233,18 +1399,18 @@
               "type": "string",
               "required": true
             }
-          ]
-        },
-        "Create a user account": {
-          "cmdlet": "New-ADUser",
+          ],
           "module": "ActiveDirectory",
-          "requiresAdmin": true,
           "signIn": {
             "service": "Active Directory",
             "mode": "credential",
             "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
             "command": "Import-Module ActiveDirectory"
-          },
+          }
+        },
+        "Create a user account": {
+          "cmdlet": "New-ADUser",
+          "requiresAdmin": true,
           "template": "New-ADUser -Name \"{name}\" -SamAccountName \"{sam}\" -GivenName \"{given}\" -Surname \"{surname}\" -Enabled {enabled} -AccountPassword {password} {ChangePasswordAtLogon}",
           "sentence": "I want to create {name} ({sam}), given name {given}, surname {surname}, enabled {enabled}, password {password}, must change {ChangePasswordAtLogon}",
           "parameters": [
@@ -276,8 +1442,8 @@
               "name": "enabled",
               "label": "enabled",
               "type": "bool",
-              "default": "true",
-              "required": true
+              "required": true,
+              "default": "true"
             },
             {
               "name": "password",
@@ -289,14 +1455,20 @@
               "name": "ChangePasswordAtLogon",
               "label": "must change password",
               "type": "switch",
-              "default": "true",
-              "required": false
+              "required": false,
+              "default": "true"
             }
-          ]
+          ],
+          "module": "ActiveDirectory",
+          "signIn": {
+            "service": "Active Directory",
+            "mode": "credential",
+            "prompt": "Enter alternate Active Directory credentials. The password stays masked and is not written into the preview.",
+            "command": "Import-Module ActiveDirectory"
+          }
         },
         "Find inactive accounts": {
           "cmdlet": "Search-ADAccount",
-          "module": "ActiveDirectory",
           "requiresAdmin": true,
           "template": "Search-ADAccount -AccountInactive -UsersOnly -TimeSpan (New-TimeSpan -Days {days})",
           "sentence": "I want user accounts inactive for {days} days",
@@ -305,10 +1477,454 @@
               "name": "days",
               "label": "days",
               "type": "int",
-              "default": "90",
+              "required": true,
+              "default": "90"
+            }
+          ],
+          "module": "ActiveDirectory"
+        },
+        "Get a directory user": {
+          "cmdlet": "Get-ADUser",
+          "requiresAdmin": true,
+          "template": "Get-ADUser -Identity \"{identity}\"",
+          "sentence": "I want the Active Directory user {identity}",
+          "parameters": [
+            {
+              "name": "identity",
+              "label": "user",
+              "type": "string",
+              "required": true,
+              "placeholder": "ada"
+            }
+          ],
+          "module": "ActiveDirectory"
+        },
+        "Get a directory group": {
+          "cmdlet": "Get-ADGroup",
+          "requiresAdmin": true,
+          "template": "Get-ADGroup -Identity \"{identity}\"",
+          "sentence": "I want the Active Directory group {identity}",
+          "parameters": [
+            {
+              "name": "identity",
+              "label": "group",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ActiveDirectory"
+        }
+      }
+    },
+    "Exchange Online": {
+      "description": "Exchange Online and the on-premises Exchange snap-in",
+      "options": {
+        "Add Mailbox Folder Permission": {
+          "cmdlet": "Add-MailboxFolderPermission",
+          "requiresAdmin": true,
+          "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
+          "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder}",
+          "parameters": [
+            {
+              "name": "owner",
+              "label": "owner user",
+              "type": "string",
+              "required": true,
+              "placeholder": "owner@yourdomain.com"
+            },
+            {
+              "name": "folder",
+              "label": "folder",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Calendar",
+                "Inbox",
+                "Contacts",
+                "Tasks",
+                "Notes"
+              ],
+              "default": "Calendar"
+            },
+            {
+              "name": "delegate",
+              "label": "delegate user",
+              "type": "string",
+              "required": true,
+              "placeholder": "delegate@yourdomain.com"
+            },
+            {
+              "name": "rights",
+              "label": "permission level",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Owner",
+                "PublishingEditor",
+                "Editor",
+                "PublishingAuthor",
+                "Author",
+                "NonEditingAuthor",
+                "Reviewer",
+                "Contributor",
+                "AvailabilityOnly",
+                "LimitedDetails",
+                "None"
+              ],
+              "default": "Editor"
+            }
+          ],
+          "module": "ExchangeOnlineManagement",
+          "shell": "pwsh",
+          "signIn": {
+            "service": "Exchange Online",
+            "mode": "interactive",
+            "prompt": "Sign in to Exchange Online. A browser window will open.",
+            "command": "Connect-ExchangeOnline -ShowBanner:$false"
+          }
+        },
+        "Remove Mailbox Folder Permission": {
+          "cmdlet": "Remove-MailboxFolderPermission",
+          "requiresAdmin": true,
+          "template": "Remove-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\"",
+          "sentence": "I want to remove {delegate}'s permissions from {owner}'s {folder}",
+          "parameters": [
+            {
+              "name": "owner",
+              "label": "owner user",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "folder",
+              "label": "folder",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "Calendar",
+                "Inbox",
+                "Contacts",
+                "Tasks"
+              ],
+              "default": "Calendar"
+            },
+            {
+              "name": "delegate",
+              "label": "delegate user",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "ExchangeOnlineManagement",
+          "signIn": {
+            "service": "Exchange Online",
+            "mode": "interactive",
+            "prompt": "Sign in to Exchange Online. A browser window will open.",
+            "command": "Connect-ExchangeOnline -ShowBanner:$false"
+          }
+        },
+        "Get a mailbox": {
+          "cmdlet": "Get-Mailbox",
+          "requiresAdmin": true,
+          "template": "Get-Mailbox -Identity \"{identity}\"",
+          "sentence": "I want the mailbox for {identity}",
+          "parameters": [
+            {
+              "name": "identity",
+              "label": "mailbox",
+              "type": "string",
+              "required": true,
+              "placeholder": "ada@yourdomain.com"
+            }
+          ],
+          "module": "ExchangeOnlineManagement",
+          "signIn": {
+            "service": "Exchange Online",
+            "mode": "interactive",
+            "prompt": "Sign in to Exchange Online. A browser window will open.",
+            "command": "Connect-ExchangeOnline -ShowBanner:$false"
+          }
+        },
+        "Grant mailbox access": {
+          "cmdlet": "Add-MailboxPermission",
+          "requiresAdmin": true,
+          "template": "Add-MailboxPermission -Identity \"{identity}\" -User \"{user}\" -AccessRights {rights}",
+          "sentence": "I want to grant {user} {rights} on mailbox {identity}",
+          "parameters": [
+            {
+              "name": "identity",
+              "label": "mailbox",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "user",
+              "label": "user",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "rights",
+              "label": "access",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "FullAccess",
+                "ReadPermission",
+                "ChangePermission"
+              ],
+              "default": "FullAccess"
+            }
+          ],
+          "module": "ExchangeOnlineManagement",
+          "signIn": {
+            "service": "Exchange Online",
+            "mode": "interactive",
+            "prompt": "Sign in to Exchange Online. A browser window will open.",
+            "command": "Connect-ExchangeOnline -ShowBanner:$false"
+          }
+        },
+        "On-premises": {
+          "description": "Windows PowerShell 5.1 and the on-premises Exchange snap-in",
+          "options": {
+            "Add Mailbox Folder Permission (On-Prem)": {
+              "cmdlet": "Add-MailboxFolderPermission",
+              "requiresAdmin": true,
+              "template": "Add-MailboxFolderPermission -Identity \"{owner}:{folder}\" -User \"{delegate}\" -AccessRights {rights}",
+              "sentence": "I want to grant {delegate} to have {rights} rights on {owner}'s {folder} (on-prem)",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "label": "owner user",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "folder",
+                  "label": "folder",
+                  "type": "string",
+                  "required": true,
+                  "default": "Calendar"
+                },
+                {
+                  "name": "delegate",
+                  "label": "delegate user",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "rights",
+                  "label": "permission level",
+                  "type": "choice",
+                  "required": true,
+                  "choices": [
+                    "Editor",
+                    "Author",
+                    "Reviewer",
+                    "Owner"
+                  ],
+                  "default": "Editor"
+                }
+              ],
+              "shell": "windows-powershell",
+              "signIn": {
+                "service": "Exchange on-premises",
+                "mode": "interactive",
+                "prompt": "This command runs in Windows PowerShell 5.1 and loads the on-premises Exchange snap-in.",
+                "command": "Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Microsoft Graph and Entra": {
+      "description": "Microsoft Graph sign-in for Entra ID",
+      "options": {
+        "Get a Graph user": {
+          "cmdlet": "Get-MgUser",
+          "requiresAdmin": false,
+          "template": "Get-MgUser -UserId \"{userId}\"",
+          "sentence": "I want the Entra user {userId}",
+          "parameters": [
+            {
+              "name": "userId",
+              "label": "user id",
+              "type": "string",
+              "required": true,
+              "placeholder": "ada@yourdomain.com"
+            }
+          ],
+          "module": "Microsoft.Graph.Users",
+          "signIn": {
+            "service": "Microsoft Graph",
+            "mode": "interactive",
+            "prompt": "Sign in to Microsoft Graph for Entra. A browser window will open.",
+            "command": "Connect-MgGraph -NoWelcome"
+          }
+        },
+        "Get a Graph group": {
+          "cmdlet": "Get-MgGroup",
+          "requiresAdmin": false,
+          "template": "Get-MgGroup -GroupId \"{groupId}\"",
+          "sentence": "I want the Entra group {groupId}",
+          "parameters": [
+            {
+              "name": "groupId",
+              "label": "group id",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.Graph.Groups",
+          "signIn": {
+            "service": "Microsoft Graph",
+            "mode": "interactive",
+            "prompt": "Sign in to Microsoft Graph for Entra. A browser window will open.",
+            "command": "Connect-MgGraph -NoWelcome"
+          }
+        },
+        "List Graph group members": {
+          "cmdlet": "Get-MgGroupMember",
+          "requiresAdmin": false,
+          "template": "Get-MgGroupMember -GroupId \"{groupId}\"",
+          "sentence": "I want members of Entra group {groupId}",
+          "parameters": [
+            {
+              "name": "groupId",
+              "label": "group id",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.Graph.Groups",
+          "signIn": {
+            "service": "Microsoft Graph",
+            "mode": "interactive",
+            "prompt": "Sign in to Microsoft Graph for Entra. A browser window will open.",
+            "command": "Connect-MgGraph -NoWelcome"
+          }
+        }
+      }
+    },
+    "Hyper-V": {
+      "description": "Hyper-V virtual machines on this computer",
+      "options": {
+        "List virtual machines": {
+          "cmdlet": "Get-VM",
+          "requiresAdmin": true,
+          "template": "Get-VM -Name \"{name}\"",
+          "sentence": "I want virtual machines named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "virtual machine",
+              "type": "string",
+              "required": false,
+              "placeholder": "*"
+            }
+          ]
+        },
+        "Start a virtual machine": {
+          "cmdlet": "Start-VM",
+          "requiresAdmin": true,
+          "template": "Start-VM -Name \"{name}\"",
+          "sentence": "I want to start virtual machine {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "virtual machine",
+              "type": "string",
               "required": true
             }
           ]
+        },
+        "Stop a virtual machine": {
+          "cmdlet": "Stop-VM",
+          "requiresAdmin": true,
+          "template": "Stop-VM -Name \"{name}\" {Force} {TurnOff}",
+          "sentence": "I want to stop virtual machine {name}, force {Force}, turn off {TurnOff}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "virtual machine",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "Force",
+              "label": "force",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            },
+            {
+              "name": "TurnOff",
+              "label": "turn off",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "Checkpoint a virtual machine": {
+          "cmdlet": "Checkpoint-VM",
+          "requiresAdmin": true,
+          "template": "Checkpoint-VM -Name \"{name}\" -SnapshotName \"{snapshot}\"",
+          "sentence": "I want a checkpoint {snapshot} of virtual machine {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "virtual machine",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "snapshot",
+              "label": "checkpoint name",
+              "type": "string",
+              "required": true
+            }
+          ]
+        },
+        "Create a virtual machine": {
+          "cmdlet": "New-VM",
+          "requiresAdmin": true,
+          "template": "New-VM -Name \"{name}\" -MemoryStartupBytes {memory} -Generation {generation}",
+          "sentence": "I want a generation {generation} virtual machine {name} with {memory} bytes of memory",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "virtual machine",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "memory",
+              "label": "startup bytes",
+              "type": "number",
+              "required": true,
+              "default": "2147483648"
+            },
+            {
+              "name": "generation",
+              "label": "generation",
+              "type": "choice",
+              "required": true,
+              "choices": [
+                "1",
+                "2"
+              ],
+              "default": "2"
+            }
+          ]
+        },
+        "List virtual switches": {
+          "cmdlet": "Get-VMSwitch",
+          "requiresAdmin": true,
+          "template": "Get-VMSwitch",
+          "sentence": "I want the Hyper-V virtual switches",
+          "parameters": []
         }
       }
     }

@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Personal project — Thomas Schueler, personal time and equipment only. Personal side project. No employer resources were used.
+Personal project — Thomas Schueler, personal time and equipment only. Personal side project. No employer resources were used. Version 0.2.0 was built the same way.
 
 ## Tech Stack Recommendation
 
@@ -24,7 +24,8 @@ The `command-tree.json` drives the entire cascading menus and parameter forms. A
 - `src/PsGuiBuilder.ElevatedHost` — small helper started with `runas`. It only receives a pipe name on the command line.
 - `src/PsGuiBuilder.PowerShell` — optional in-process PowerShell 7 host for non-elevated runs.
 - `tests/PsGuiBuilder.Tests` — loader, cascade, quoting, and protocol tests.
-- `command-tree.json` — the menu and parameter source of truth. An installed build copies that default into `%APPDATA%\PsGuiBuilder\command-tree.json` on first launch and loads the user copy after that, so an upgrade can replace the Program Files default without touching edits. `--tree` still wins. `PsGuiBuilder.installed` beside the executable marks an installed build; a dev build does not seed the user file.
+- `command-tree.json` — the menu and parameter source of truth. An installed build copies that default into `%APPDATA%\PsGuiBuilder\command-tree.json` on first launch and loads the user copy after that, so an upgrade can replace the Program Files default without touching edits. **Load new default commands** adds entries that are in the new default and missing from the AppData file. It does not replace a category, branch, or command you already have, including ones you edited. `--tree` still wins. `PsGuiBuilder.installed` beside the executable marks an installed build; a dev build does not seed the user file.
+- `src/PsGuiBuilder/Assets/PsGuiBuilder.ico` — the app icon at 16, 24, 32, 48, 64, 128, and 256 pixels. The executable, the window, the installer, the shortcuts, and Add/Remove Programs use it.
 - `VERSION` — the app and installer version, `major.minor.patch`.
 - `installer/` — Inno Setup script and the self-contained win-x64 publish script.
 

@@ -2,7 +2,7 @@
 
 ## Declaration
 
-This entire project (PowerShell GUI Command Builder) is a personal side project of Thomas Schueler, built on personal time with personal equipment. No employer resources were used.
+This entire project (PowerShell GUI Command Builder) is a personal side project of Thomas Schueler, built on personal time with personal equipment. No employer resources were used. Version 0.2.0 was built the same way.
 
 - Developed exclusively on personal time.
 - Developed exclusively on personal equipment.

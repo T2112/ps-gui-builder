@@ -3,10 +3,14 @@
 // Not related to any employment.
 
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using PsGuiBuilder.Core.Building;
+using PsGuiBuilder.Core.CommandTree;
+using PsGuiBuilder.Execution;
 using PsGuiBuilder.ViewModels;
 
 namespace PsGuiBuilder;
@@ -14,6 +18,8 @@ namespace PsGuiBuilder;
 public partial class MainWindow : Window
 {
     private MainViewModel? _viewModel;
+
+    public string LoadedTreePath { get; set; } = "";
 
     public MainWindow()
     {
@@ -56,4 +62,65 @@ public partial class MainWindow : Window
         });
         OutputBox.ScrollToEnd();
     }
+
+    private void LoadNewDefaultCommands(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            if (string.IsNullOrWhiteSpace(appData))
+            {
+                ShowTreeMessage("The personal command tree folder is not available.");
+                return;
+            }
+
+            var userFile = CommandTreeLocations.UserFile(appData);
+            var defaultFile = Path.Combine(AppContext.BaseDirectory, CommandTreeLocations.FileName);
+            if (!File.Exists(defaultFile))
+            {
+                ShowTreeMessage("The default command tree was not found next to this app.");
+                return;
+            }
+
+            if (!File.Exists(userFile))
+            {
+                ShowTreeMessage("There is no personal command tree in %APPDATA%\\PsGuiBuilder yet. This window is already using the default commands. After that file exists, Load new default commands adds missing entries there and leaves your edits alone.");
+                return;
+            }
+
+            var result = CommandTreeMerger.MergeFiles(userFile, defaultFile);
+            if (result.CommandsAdded == 0)
+            {
+                ShowTreeMessage("No new default commands were missing. Your edits were left as they are.");
+                return;
+            }
+
+            var preview = result.AddedNames.Take(12).ToArray();
+            var list = string.Join(Environment.NewLine, preview);
+            var extra = result.CommandsAdded - preview.Length;
+            if (extra > 0)
+                list += Environment.NewLine + "and " + extra + " more";
+
+            ShowTreeMessage(
+                "Added " + result.CommandsAdded + " commands from the default tree. Your existing entries were not changed."
+                + Environment.NewLine + Environment.NewLine + list);
+
+            if (string.Equals(Path.GetFullPath(LoadedTreePath), Path.GetFullPath(userFile), StringComparison.OrdinalIgnoreCase))
+                ReloadTree(userFile);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ReloadTree(string path)
+    {
+        var tree = CommandTreeLoader.LoadFile(path);
+        OutputBox.Document.Blocks.Clear();
+        DataContext = new MainViewModel(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog());
+    }
+
+    private void ShowTreeMessage(string message) =>
+        MessageBox.Show(this, message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Information);
 }
