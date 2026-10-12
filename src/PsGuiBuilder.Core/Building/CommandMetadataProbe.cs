@@ -3,7 +3,6 @@
 // Not related to any employment.
 
 using System.Diagnostics;
-using System.Text;
 using System.Text.RegularExpressions;
 using PsGuiBuilder.Core.CommandTree;
 using PsGuiBuilder.Core.Execution;
@@ -52,9 +51,7 @@ public sealed partial class CommandMetadataProbe
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = resolution.Shell.Encoding,
-            StandardErrorEncoding = resolution.Shell.Encoding
+            RedirectStandardError = true
         };
         startInfo.Environment[CommandEnvironmentVariable] = name;
 
@@ -69,8 +66,8 @@ public sealed partial class CommandMetadataProbe
             return new CommandProbeResult(null, ex.Message, resolution.Notice);
         }
 
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        var stdout = ProcessOutputText.ReadAllAsync(process.StandardOutput.BaseStream, cancellationToken);
+        var stderr = ProcessOutputText.ReadAllAsync(process.StandardError.BaseStream, cancellationToken);
         try
         {
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);

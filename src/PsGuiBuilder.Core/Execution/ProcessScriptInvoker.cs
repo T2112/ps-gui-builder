@@ -35,9 +35,7 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
             UseShellExecute = false,
             CreateNoWindow = !request.Interactive,
             RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = _shell.Encoding,
-            StandardErrorEncoding = _shell.Encoding
+            RedirectStandardError = true
         };
 
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -79,8 +77,8 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
                 throw new InvalidOperationException($"Could not start '{_shell.FileName}'.");
 
             using var killOnCancel = cancellationToken.Register(() => TryKill(process));
-            stdout = PumpAsync(process.StandardOutput, output.WriteStdout, cancellationToken);
-            stderr = PumpAsync(process.StandardError, output.WriteStderr, cancellationToken);
+            stdout = ProcessOutputText.CopyAsync(process.StandardOutput.BaseStream, output.WriteStdout, cancellationToken);
+            stderr = ProcessOutputText.CopyAsync(process.StandardError.BaseStream, output.WriteStderr, cancellationToken);
 
             if (standardInput)
             {
@@ -131,28 +129,6 @@ public sealed class ProcessScriptInvoker : IScriptInvoker
                 {
                 }
             }
-        }
-    }
-
-    private static async Task PumpAsync(StreamReader reader, Action<string> write, CancellationToken cancellationToken)
-    {
-        var buffer = new char[512];
-        var first = true;
-        while (true)
-        {
-            var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-            if (count == 0)
-                return;
-
-            var text = new string(buffer, 0, count);
-            if (first)
-            {
-                text = text.TrimStart('\uFEFF');
-                first = false;
-            }
-
-            if (text.Length > 0)
-                write(text);
         }
     }
 
