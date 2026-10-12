@@ -17,20 +17,22 @@ public class CascadeSessionTests
     {
         var level = Assert.Single(_session.Levels);
         Assert.Equal("I Want To:", level.Prompt);
-        Assert.Equal(3, level.Options.Count);
+        Assert.Equal(15, level.Options.Count);
+        Assert.Equal("Files and folders", level.Options[0].Name);
+        Assert.Equal("Hyper-V", level.Options[^1].Name);
         Assert.Null(_session.SelectedCommand);
     }
 
     [Fact]
     public void Filters_by_case_insensitive_tokens_without_selecting()
     {
-        _session.SetFilter(0, "NETWORK drive");
+        _session.SetFilter(0, "files folder");
 
         var filtered = _session.Levels[0].FilteredOptions;
         var match = Assert.Single(filtered);
-        Assert.Equal("Map a Network Drive", match.Name);
+        Assert.Equal("Files and folders", match.Name);
         Assert.Null(_session.Levels[0].SelectedKey);
-        Assert.Equal(3, _session.Levels[0].Options.Count);
+        Assert.Equal(15, _session.Levels[0].Options.Count);
     }
 
     [Fact]
@@ -38,26 +40,25 @@ public class CascadeSessionTests
     {
         _session.SetFilter(0, "map");
         _session.SetFilter(0, "  ");
-        Assert.Equal(3, _session.Levels[0].FilteredOptions.Count);
+        Assert.Equal(15, _session.Levels[0].FilteredOptions.Count);
     }
 
     [Fact]
     public void Selecting_a_branch_opens_the_next_level()
     {
-        _session.Select(0, "Edit Exchange Settings");
+        _session.Select(0, "Exchange Online");
 
         Assert.Equal(2, _session.Levels.Count);
         Assert.Equal("Then:", _session.Levels[1].Prompt);
-        Assert.Equal(
-            new[] { "On Exchange Online", "On a Network Server" },
-            _session.Levels[1].Options.Select(option => option.Name).ToArray());
+        Assert.Contains(_session.Levels[1].Options, option => option.Name == "Add Mailbox Folder Permission");
+        Assert.Contains(_session.Levels[1].Options, option => option.Name == "On-premises");
         Assert.Null(_session.SelectedCommand);
     }
 
     [Fact]
     public void Selecting_a_command_stops_the_cascade()
     {
-        _session.Select(0, "Map a Network Drive");
+        _session.Select(0, "Networking");
         _session.Select(1, "Map New Drive");
 
         Assert.Equal(2, _session.Levels.Count);
@@ -69,29 +70,22 @@ public class CascadeSessionTests
     [Fact]
     public void Changing_an_earlier_choice_drops_later_levels()
     {
-        _session.Select(0, "Edit Exchange Settings");
-        _session.Select(1, "On Exchange Online");
+        _session.Select(0, "Exchange Online");
+        _session.Select(1, "On-premises");
         Assert.Equal(3, _session.Levels.Count);
 
-        _session.Select(0, "Manage Users and Groups");
+        _session.Select(0, "Active Directory");
 
         Assert.Equal(2, _session.Levels.Count);
-        Assert.Equal(
-            new[]
-            {
-                "Add User to Group",
-                "Add several users to a group",
-                "Create a user account",
-                "Find inactive accounts"
-            },
-            _session.Levels[1].Options.Select(option => option.Name).ToArray());
+        Assert.Contains(_session.Levels[1].Options, option => option.Name == "Add User to Group");
+        Assert.Contains(_session.Levels[1].Options, option => option.Name == "Find inactive accounts");
         Assert.Null(_session.SelectedCommand);
     }
 
     [Fact]
     public void Clear_selection_removes_the_command_and_deeper_levels()
     {
-        _session.Select(0, "Map a Network Drive");
+        _session.Select(0, "Networking");
         _session.Select(1, "Map New Drive");
 
         _session.ClearSelection(1);
@@ -104,8 +98,8 @@ public class CascadeSessionTests
     [Fact]
     public void Try_resolve_accepts_an_exact_or_unique_match_only()
     {
-        Assert.Equal("Map a Network Drive", _session.TryResolve(0, "  map a network drive "));
-        Assert.Equal("Manage Users and Groups", _session.TryResolve(0, "groups"));
+        Assert.Equal("Networking", _session.TryResolve(0, "  networking "));
+        Assert.Equal("Users and groups", _session.TryResolve(0, "groups"));
         Assert.Null(_session.TryResolve(0, "e"));
         Assert.Null(_session.TryResolve(0, ""));
     }
@@ -113,11 +107,10 @@ public class CascadeSessionTests
     [Fact]
     public void Cmdlet_text_is_searchable_on_a_command_level()
     {
-        _session.Select(0, "Edit Exchange Settings");
-        _session.Select(1, "On Exchange Online");
-        _session.SetFilter(2, "remove-mailbox");
+        _session.Select(0, "Exchange Online");
+        _session.SetFilter(1, "remove-mailbox");
 
-        var match = Assert.Single(_session.Levels[2].FilteredOptions);
+        var match = Assert.Single(_session.Levels[1].FilteredOptions);
         Assert.Equal("Remove Mailbox Folder Permission", match.Name);
         Assert.Contains("Remove-MailboxFolderPermission", match.Description, StringComparison.Ordinal);
     }
@@ -126,10 +119,10 @@ public class CascadeSessionTests
     public void Typos_rank_the_closest_option_first()
     {
         _session.SetFilter(0, "exchnge");
-        Assert.Equal("Edit Exchange Settings", _session.Levels[0].FilteredOptions[0].Name);
+        Assert.Equal("Exchange Online", _session.Levels[0].FilteredOptions[0].Name);
 
-        _session.SetFilter(0, "netwrok drive");
-        Assert.Equal("Map a Network Drive", Assert.Single(_session.Levels[0].FilteredOptions).Name);
+        _session.SetFilter(0, "netwroking");
+        Assert.Equal("Networking", Assert.Single(_session.Levels[0].FilteredOptions).Name);
 
         _session.SetFilter(0, "zzzzzz");
         Assert.Empty(_session.Levels[0].FilteredOptions);
@@ -145,7 +138,7 @@ public class CascadeSessionTests
     [Fact]
     public void Reset_returns_to_the_first_level()
     {
-        _session.Select(0, "Map a Network Drive");
+        _session.Select(0, "Networking");
         _session.Reset();
 
         Assert.Single(_session.Levels);

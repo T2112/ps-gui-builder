@@ -11,6 +11,7 @@
     <RootNamespace>PsGuiBuilder</RootNamespace>
     <AssemblyName>PsGuiBuilder</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\PsGuiBuilder.ico</ApplicationIcon>
     <Description>Personal PowerShell GUI Command Builder.</Description>
   </PropertyGroup>
 
@@ -30,6 +31,7 @@
 
   <ItemGroup>
     <Content Include="..\..\command-tree.json" Link="command-tree.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Resource Include="Assets\PsGuiBuilder.ico" />
   </ItemGroup>
 
   <Target Name="CopyElevatedHost" AfterTargets="Build">

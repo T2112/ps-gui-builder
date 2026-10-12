@@ -32,7 +32,9 @@ That publishes `PsGuiBuilder` and `PsGuiBuilder.ElevatedHost` as self-contained 
 
 The setup program shows the LICENSE, installs to `C:\Program Files\PsGuiBuilder`, registers an uninstaller, adds a Start menu shortcut, and offers an optional desktop shortcut. Publisher and copyright name Thomas Schueler, personal project.
 
-The Program Files copy of `command-tree.json` is the default. The first launch of an installed build copies it to `%APPDATA%\PsGuiBuilder\command-tree.json` and uses that file from then on. Edit the AppData copy. An upgrade replaces the Program Files default and does not overwrite the AppData file. Delete the AppData file to seed a new copy from the upgraded default. `--tree path\to\command-tree.json` overrides both. A dev build does not create the AppData file unless it is already there.
+The Program Files copy of `command-tree.json` is the default. The first launch of an installed build copies it to `%APPDATA%\PsGuiBuilder\command-tree.json` and uses that file from then on. Edit the AppData copy. An upgrade replaces the Program Files default and does not overwrite the AppData file. **Load new default commands** adds commands that are in the new default and missing from your AppData copy. It leaves entries you already have, including edits, as they are. Delete the AppData file to seed a new copy from the upgraded default. `--tree path\to\command-tree.json` overrides both. A dev build does not create the AppData file unless it is already there.
+
+New releases stay on the private GitHub Release. Download the setup program yourself and run it. The app does not check for updates.
 
 Uninstall leaves the AppData command tree in place.
 
@@ -69,7 +71,7 @@ GitHub Actions builds, tests, and creates the installer on `windows-latest` for 
 
 ## Status
 
-The .NET 8 WPF scaffold loads `command-tree.json`, searches through cascading boxes, fills a sentence-style parameter form, previews the quoted command, and can run it elevated or as the current user. The checked-in tree is still the sample. Add categories by editing `command-tree.json`.
+The .NET 8 WPF app loads `command-tree.json`, searches through cascading boxes, fills a sentence-style parameter form, previews the quoted command, and can run it elevated or as the current user. The default tree covers files, processes, services, networking, disks, event logs, local accounts, scheduled tasks, the registry, Windows Update and system info, printers, Active Directory, Exchange Online, Microsoft Graph and Entra, and Hyper-V. Add more by editing `command-tree.json`.
 
 ## License
 
