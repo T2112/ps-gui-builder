@@ -17,6 +17,12 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += (_, args) =>
         {
+            if (ExternalWindows.TryDefer(args.Exception.Message))
+            {
+                args.Handled = true;
+                return;
+            }
+
             MessageBox.Show(args.Exception.Message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
             Shutdown(1);

@@ -5,6 +5,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using PsGuiBuilder.Core.Building;
+using PsGuiBuilder;
 using PsGuiBuilder.Core.Cascade;
 using PsGuiBuilder.Core.CommandTree;
 using PsGuiBuilder.Core.Execution;
@@ -30,7 +31,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly CascadeSession _session;
     private readonly ICommandExecutor _executor;
     private readonly CommandMetadataProbe _probe;
-    private readonly ISignInPrompt _signIn;
+    private readonly ICredentialPrompt _signIn;
     private readonly OutputAdapter _output;
     private readonly List<string> _redact = new();
     private readonly List<FieldSegmentViewModel> _fields = new();
@@ -49,7 +50,7 @@ public sealed class MainViewModel : ObservableObject
     private CommandDefinition? _genericCommand;
     private string _cmdletQuery = "";
 
-    public MainViewModel(CommandTree tree, ICommandExecutor executor, CommandMetadataProbe probe, ISignInPrompt signIn)
+    public MainViewModel(CommandTree tree, ICommandExecutor executor, CommandMetadataProbe probe, ICredentialPrompt signIn)
     {
         _session = new CascadeSession(tree);
         _executor = executor;
@@ -289,65 +290,92 @@ public sealed class MainViewModel : ObservableObject
         if (_formCommand is null || _lastBuild is not { IsComplete: true })
             return;
 
-        string? signInUsername = null;
-        var secrets = new Dictionary<string, string>(_lastBuild.Secrets, StringComparer.Ordinal);
-        if (_formCommand.SignIn?.Mode == SignInMode.Credential)
+        var command = _formCommand;
+        var executionText = _lastBuild.ExecutionText;
+        var commandSecrets = new Dictionary<string, string>(_lastBuild.Secrets, StringComparer.Ordinal);
+        _redact.Clear();
+        var preview = PreviewText;
+        var credentialSignIn = command.SignIn?.Mode == SignInMode.Credential;
+        var interactiveSignIn = command.SignIn?.Mode == SignInMode.Interactive;
+        var elevate = RunElevated;
+        var inProcess = InProcess && !elevate && command.Shell == PowerShellEdition.PowerShell7;
+        PowerShellShell? shell = null;
+        ElevatedConnection? connection = null;
+        _runCts = new CancellationTokenSource();
+        IsRunning = true;
+        HasCompletedRun = false;
+        ExternalWindows.Hold();
+
+        try
         {
-            var prompted = _signIn.Ask(_formCommand.SignIn);
-            if (prompted is null)
+            var outcome = await LaunchDriver.RunAsync(
+                credentialSignIn,
+                interactiveSignIn,
+                elevate,
+                command.SignIn,
+                commandSecrets,
+                new StageGate(),
+                _signIn.Ask,
+                _ =>
+                {
+                    if (inProcess)
+                        return Task.FromResult<string?>(null);
+
+                    var resolution = PowerShellLocator.Resolve(command.Shell);
+                    if (resolution.Error is not null || resolution.Shell is null)
+                        return Task.FromResult<string?>(resolution.Error ?? "PowerShell was not found.");
+
+                    shell = resolution.Shell;
+                    if (resolution.Notice is not null)
+                        Emit(resolution.Notice + Environment.NewLine, isError: true);
+
+                    return Task.FromResult<string?>(null);
+                },
+                async cancellationToken => connection = await new ElevatedCommandRunner().ConnectAsync(cancellationToken),
+                (username, secrets, cancellationToken) =>
+                {
+                    _redact.Clear();
+                    foreach (var secret in secrets.Values)
+                    {
+                        if (secret.Length >= 4)
+                            _redact.Add(secret);
+                    }
+
+                    Emit(Environment.NewLine + "PS> " + preview + Environment.NewLine, isError: false);
+                    var script = ScriptComposer.ComposeExecution(command, executionText, username);
+                    var request = new ScriptRequest(script, secrets, interactiveSignIn);
+                    if (connection is not null)
+                        return connection.InvokeAsync(request, _output, cancellationToken);
+
+                    return _executor.RunAsync(request, elevated: false, inProcess, shell, _output, cancellationToken);
+                },
+                _runCts.Token,
+                stage =>
+                {
+                    StatusText = stage switch
+                    {
+                        LaunchStage.CredentialPrompt => "Signing in to " + command.SignIn!.Service + "…",
+                        LaunchStage.Elevation => "Waiting for administrator approval…",
+                        LaunchStage.SignInWindow => "Signing in to " + command.SignIn!.Service + "…",
+                        _ => elevate ? "Running elevated…" : "Running…"
+                    };
+                });
+
+            if (outcome.Status == LaunchStatus.Cancelled)
             {
                 StatusText = "Sign-in was cancelled.";
                 return;
             }
 
-            signInUsername = prompted.Username;
-            secrets[SignInRequirement.SecretKey] = prompted.Password;
-        }
-
-        var script = ScriptComposer.ComposeExecution(_formCommand, _lastBuild.ExecutionText, signInUsername);
-        var preview = PreviewText;
-        _redact.Clear();
-        foreach (var secret in secrets.Values)
-        {
-            if (secret.Length >= 4)
-                _redact.Add(secret);
-        }
-
-        PowerShellShell? shell = null;
-        var inProcess = InProcess && !RunElevated && _formCommand.Shell == PowerShellEdition.PowerShell7;
-        if (!inProcess)
-        {
-            var resolution = PowerShellLocator.Resolve(_formCommand.Shell);
-            if (resolution.Error is not null || resolution.Shell is null)
+            if (outcome.Status == LaunchStatus.Failed)
             {
-                Emit(Environment.NewLine + (resolution.Error ?? "PowerShell was not found.") + Environment.NewLine, isError: true);
-                StatusText = "PowerShell was not found.";
+                Emit(Environment.NewLine + outcome.Error + Environment.NewLine, isError: true);
+                StatusText = outcome.Error ?? "Failed.";
                 return;
             }
 
-            shell = resolution.Shell;
-            if (resolution.Notice is not null)
-                Emit(resolution.Notice + Environment.NewLine, isError: true);
-        }
-
-        var request = new ScriptRequest(
-            script,
-            secrets,
-            _formCommand.SignIn?.Mode == SignInMode.Interactive);
-        _runCts = new CancellationTokenSource();
-        IsRunning = true;
-        HasCompletedRun = false;
-        StatusText = RunElevated ? "Waiting for administrator approval…" : "Running…";
-        if (_formCommand.SignIn is not null)
-            StatusText = "Signing in to " + _formCommand.SignIn.Service + "…";
-
-        Emit(Environment.NewLine + "PS> " + preview + Environment.NewLine, isError: false);
-
-        try
-        {
-            var code = await _executor.RunAsync(request, RunElevated, inProcess, shell, _output, _runCts.Token);
-            Emit(Environment.NewLine + "[exit " + code + "]" + Environment.NewLine, code != 0);
-            StatusText = code == 0 ? "Completed. Run again, or start over." : "Completed with exit code " + code + ".";
+            Emit(Environment.NewLine + "[exit " + outcome.ExitCode + "]" + Environment.NewLine, outcome.ExitCode != 0);
+            StatusText = outcome.ExitCode == 0 ? "Completed. Run again, or start over." : "Completed with exit code " + outcome.ExitCode + ".";
             HasCompletedRun = true;
         }
         catch (OperationCanceledException)
@@ -362,11 +390,17 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
+            commandSecrets.Clear();
+            if (connection is not null)
+                await connection.DisposeAsync();
+
             _runCts.Dispose();
             _runCts = null;
-            secrets.Clear();
             _redact.Clear();
             IsRunning = false;
+            var deferred = ExternalWindows.Release();
+            if (!string.IsNullOrEmpty(deferred))
+                System.Windows.MessageBox.Show(deferred, "PowerShell GUI Command Builder");
         }
     }
 
@@ -446,7 +480,12 @@ public sealed class MainViewModel : ObservableObject
             ? "It runs in Windows PowerShell 5.1."
             : "It runs in PowerShell 7 (pwsh). If pwsh is not installed, the app falls back to Windows PowerShell 5.1 and says so.");
         if (command.SignIn is not null)
+        {
             parts.Add(command.SignIn.Prompt);
+            parts.Add(command.SignIn.Mode == SignInMode.Credential
+                ? "Each run asks for credentials again and does not reuse the previous password."
+                : "The sign-in window stays up by itself until it closes.");
+        }
 
         return string.Join(" ", parts);
     }

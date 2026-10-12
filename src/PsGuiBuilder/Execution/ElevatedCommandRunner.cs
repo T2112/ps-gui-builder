@@ -12,13 +12,57 @@ using PsGuiBuilder.Core.Execution;
 
 namespace PsGuiBuilder.Execution;
 
+public sealed class ElevatedConnection : IAsyncDisposable
+{
+    private readonly NamedPipeServerStream _server;
+    private readonly CancellationTokenSource _connectCts;
+    private readonly Task _connectTask;
+    private readonly StreamFrameTransport _transport;
+    private int _disposed;
+
+    internal ElevatedConnection(NamedPipeServerStream server, CancellationTokenSource connectCts, Task connectTask)
+    {
+        _server = server;
+        _connectCts = connectCts;
+        _connectTask = connectTask;
+        _transport = new StreamFrameTransport(server);
+    }
+
+    public Task<int> InvokeAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken) =>
+        new ExecutionClient().RunAsync(_transport, request, output, cancellationToken);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        _connectCts.Cancel();
+        try
+        {
+            await _connectTask.ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+        }
+
+        _connectCts.Dispose();
+        await _server.DisposeAsync().ConfigureAwait(false);
+    }
+}
+
 public sealed class ElevatedCommandRunner
 {
     public async Task<int> RunAsync(ScriptRequest request, IExecutionOutput output, CancellationToken cancellationToken)
     {
+        await using var connection = await ConnectAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.InvokeAsync(request, output, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ElevatedConnection> ConnectAsync(CancellationToken cancellationToken)
+    {
         var pipeName = "PsGuiBuilder." + Guid.NewGuid().ToString("N");
-        using var server = CreateServer(pipeName);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var server = CreateServer(pipeName);
+        var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var connectTask = server.WaitForConnectionAsync(connectCts.Token);
         try
         {
@@ -40,10 +84,9 @@ public sealed class ElevatedCommandRunner
                 throw new TimeoutException("The elevated helper did not connect after administrator approval.");
             }
 
-            var transport = new StreamFrameTransport(server);
-            return await new ExecutionClient().RunAsync(transport, request, output, cancellationToken).ConfigureAwait(false);
+            return new ElevatedConnection(server, connectCts, connectTask);
         }
-        finally
+        catch
         {
             connectCts.Cancel();
             try
@@ -53,6 +96,10 @@ public sealed class ElevatedCommandRunner
             catch (Exception)
             {
             }
+
+            connectCts.Dispose();
+            await server.DisposeAsync().ConfigureAwait(false);
+            throw;
         }
     }
 

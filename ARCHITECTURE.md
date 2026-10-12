@@ -53,7 +53,9 @@ A node is either a branch (`options`) or a command (`cmdlet`), not both. Unknown
 }
 ```
 
-`mode` is `interactive` or `credential`. Interactive mode runs `command` in the same PowerShell process as the user's command, without `-NonInteractive`, so a module can open a browser. Credential mode asks for a user name and a masked password, builds `$__psgui_credential` from `$__psgui_username` and `$__psgui_secret_signin`, then runs `command`. Passwords are not written into `command-tree.json`, the preview, or the output log.
+`mode` is `interactive` or `credential`. Interactive mode runs `command` in the same PowerShell process as the user's command, without `-NonInteractive`, so a module can open a browser. Credential mode asks for a user name and a masked password, builds `$__psgui_credential` from `$__psgui_username` and `$__psgui_secret_signin`, then runs `command`. The dialog starts empty on every run, including Run again. There is no "use the current user" choice, and the password is discarded when the run ends. Passwords are not written into `command-tree.json`, the preview, or the output log.
+
+Windows are sequenced so only one is open. The credential dialog closes before UAC starts. An elevated interactive sign-in shares that PowerShell process, so Windows has to accept UAC before the process can open the Connect window; the app does not open the window until UAC has closed. While either sign-in window is open, the app does not open UAC, another dialog, or a result popup. The exit code is written to the output pane after that window closes. A parameter `securestring`, such as a new account password, stays in its masked field so Run again can reuse it. The sign-in password does not.
 
 The live preview substitutes the template. Inside the author's double quotes, `` ` ``, `"`, `$`, and newlines are backtick-escaped so the value stays data. Outside quotes, a simple identifier is left bare (so `Editor` stays `Editor`) and anything else is wrapped in single quotes with embedded quotes doubled. `bool` becomes `$true` or `$false`. `int` and `number` are unquoted invariant-culture numbers. `array` is a comma-separated list of quoted items. `switch` becomes `-<name>` when on. A secure string is shown as `***` in the preview and as `$__psgui_secret_<name>` in the script that actually runs.
 
@@ -79,4 +81,4 @@ Cmdlets that are not in the tree can be looked up by name. The app runs `Get-Com
 
 1. Add more categories and cmdlets to `command-tree.json`.
 2. `requiresAdmin` is a local UAC prompt. Service sign-in is the separate `signIn` object. The sample Exchange Online command calls `Connect-ExchangeOnline`; local elevation does not sign you in by itself.
-3. Looked-up cmdlets do not include dynamic parameters, and their sentences are generated from parameter names. A hand-written sentence in the tree is still the better form when you know the command.
+3. These choices stay as they are: secrets shorter than 4 characters are not scrubbed from later cmdlet output; looked-up cmdlets skip dynamic parameters and `Get-Help`; a switch flag is `-{name}` using the PowerShell parameter name; a blank value embedded in other template text cannot be omitted; `number` is in the schema and is unused in the sample tree; **Run inside this app** stays off for Windows PowerShell 5.1; the Active Directory sample may import its module twice.

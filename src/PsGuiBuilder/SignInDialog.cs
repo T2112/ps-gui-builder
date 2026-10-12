@@ -7,30 +7,13 @@ using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using PsGuiBuilder.Core.CommandTree;
+using PsGuiBuilder.Core.Execution;
 
 namespace PsGuiBuilder;
 
-public interface ISignInPrompt
+public sealed class SignInDialog : ICredentialPrompt
 {
-    SignInPromptResult? Ask(SignInRequirement requirement);
-}
-
-public sealed class SignInPromptResult
-{
-    public SignInPromptResult(string username, string password)
-    {
-        Username = username;
-        Password = password;
-    }
-
-    public string Username { get; }
-
-    public string Password { get; }
-}
-
-public sealed class SignInDialog : ISignInPrompt
-{
-    public SignInPromptResult? Ask(SignInRequirement requirement)
+    public CredentialAnswer? Ask(SignInRequirement requirement)
     {
         var user = new TextBox { Margin = new Thickness(0, 4, 0, 12), Padding = new Thickness(8, 6, 8, 6) };
         var password = new PasswordBox { Margin = new Thickness(0, 4, 0, 12), Padding = new Thickness(8, 6, 8, 6) };
@@ -43,6 +26,7 @@ public sealed class SignInDialog : ISignInPrompt
             SizeToContent = SizeToContent.Height,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ResizeMode = ResizeMode.NoResize,
+            Topmost = true,
             Owner = Application.Current?.MainWindow
         };
         var buttons = new StackPanel
@@ -81,11 +65,15 @@ public sealed class SignInDialog : ISignInPrompt
         if (!accepted)
         {
             password.Clear();
+            user.Clear();
             return null;
         }
 
-        var result = new SignInPromptResult(user.Text.Trim(), ReadPassword(password.SecurePassword));
+        var passwordChars = ReadPassword(password.SecurePassword);
+        var result = new CredentialAnswer(user.Text.Trim(), passwordChars);
+        Array.Clear(passwordChars);
         password.Clear();
+        user.Clear();
         return result;
     }
 
@@ -102,12 +90,12 @@ public sealed class SignInDialog : ISignInPrompt
         return button;
     }
 
-    private static string ReadPassword(SecureString secret)
+    private static char[] ReadPassword(SecureString secret)
     {
         var pointer = Marshal.SecureStringToGlobalAllocUnicode(secret);
         try
         {
-            return Marshal.PtrToStringUni(pointer) ?? "";
+            return (Marshal.PtrToStringUni(pointer) ?? "").ToCharArray();
         }
         finally
         {
