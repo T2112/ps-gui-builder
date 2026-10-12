@@ -18,9 +18,38 @@ A Windows GUI application that provides a guided, cascading searchable menu inte
 - Executes the filled command in an elevated PowerShell session and shows results.
 - Offers to repeat the same action with new parameters or return to the start.
 
+## Build and run
+
+The desktop app is a Windows .NET 8 WPF program. The core tests also run on Linux.
+
+Requirements:
+
+- Windows 10 or later, for the WPF app and for elevated commands
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Windows PowerShell 5.1, which ships with Windows, for elevated commands
+
+From the repository root on Windows:
+
+```powershell
+dotnet test PsGuiBuilder.sln
+dotnet run --project src/PsGuiBuilder
+```
+
+`dotnet test` builds the WPF app, the elevated helper, and the test project, then runs the tests. On Linux, build and run the core tests only:
+
+```bash
+dotnet test tests/PsGuiBuilder.Tests/PsGuiBuilder.Tests.csproj
+```
+
+The app loads `command-tree.json` from the build output (the file is copied there), from the current directory, or from `--tree path\to\command-tree.json`.
+
+Check **Run as administrator** to approve a UAC prompt and execute in an elevated PowerShell process. Leave it unchecked to run as the current user. **Run inside this app** uses the embedded PowerShell 7 engine instead of a separate process. That mode cannot elevate. Point `PSGUIBUILDER_SHELL` at another `powershell.exe` or `pwsh` if the default Windows PowerShell host is not the one you want.
+
+GitHub Actions builds and tests on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. The workflow does not publish releases.
+
 ## Status
 
-Initial design and sample command tree. Implementation to follow.
+The .NET 8 WPF scaffold loads `command-tree.json`, searches through cascading boxes, fills a sentence-style parameter form, previews the quoted command, and can run it elevated or as the current user. The checked-in tree is still the sample. Add categories by editing `command-tree.json`.
 
 ## License
 

@@ -1,0 +1,21 @@
+<!--
+  Personal project by Thomas Schueler.
+  Developed on personal time using personal equipment.
+  Not related to any employment.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>PsGuiBuilder.PowerShell</RootNamespace>
+    <AssemblyName>PsGuiBuilder.PowerShell</AssemblyName>
+    <Description>Personal in-process PowerShell host for PsGuiBuilder.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PsGuiBuilder.Core\PsGuiBuilder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.20" />
+  </ItemGroup>
+</Project>

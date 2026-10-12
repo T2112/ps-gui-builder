@@ -1,0 +1,16 @@
+<!--
+  Personal project by Thomas Schueler.
+  Developed on personal time using personal equipment.
+  Not related to any employment.
+-->
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <IsPackable>false</IsPackable>
+    <Deterministic>true</Deterministic>
+    <!-- The WPF markup compiler builds a *wpftmp project, so exclude that name too. -->
+    <TreatWarningsAsErrors Condition="'$(MSBuildProjectName)' != 'PsGuiBuilder' and !$(MSBuildProjectName.Contains('wpftmp'))">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

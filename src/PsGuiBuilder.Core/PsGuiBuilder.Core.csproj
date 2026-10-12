@@ -1,0 +1,13 @@
+<!--
+  Personal project by Thomas Schueler.
+  Developed on personal time using personal equipment.
+  Not related to any employment.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>PsGuiBuilder.Core</RootNamespace>
+    <AssemblyName>PsGuiBuilder.Core</AssemblyName>
+    <Description>Personal PowerShell GUI Command Builder core library.</Description>
+  </PropertyGroup>
+</Project>
