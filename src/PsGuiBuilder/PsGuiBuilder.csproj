@@ -34,7 +34,9 @@
 
   <Target Name="CopyElevatedHost" AfterTargets="Build">
     <PropertyGroup>
-      <_HostOut>$(MSBuildThisFileDirectory)..\PsGuiBuilder.ElevatedHost\bin\$(Configuration)\net8.0\</_HostOut>
+      <!-- A win-x64 publish places the helper under net8.0\win-x64. A normal build does not. -->
+      <_HostRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)\</_HostRid>
+      <_HostOut>$(MSBuildThisFileDirectory)..\PsGuiBuilder.ElevatedHost\bin\$(Configuration)\net8.0\$(_HostRid)</_HostOut>
     </PropertyGroup>
     <Error Text="The elevated helper was not built at $(_HostOut)." Condition="!Exists('$(_HostOut)PsGuiBuilder.ElevatedHost.dll')" />
     <ItemGroup>
