@@ -8,14 +8,18 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   windows:
-    name: Build and test on Windows
+    name: Build, test, and create the installer
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -25,6 +29,49 @@ jobs:
 
       - name: Build and test
         run: dotnet test PsGuiBuilder.sln --configuration Release --verbosity normal
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Publish the self-contained app and build the installer
+        shell: pwsh
+        run: ./installer/build.ps1
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PsGuiBuilder-Setup
+          path: |
+            artifacts/PsGuiBuilder-Setup-*.exe
+            artifacts/PsGuiBuilder-Setup-*.exe.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "v$version"
+          if ($env:GITHUB_REF -like "refs/tags/*") {
+            $pushed = $env:GITHUB_REF.Substring("refs/tags/".Length)
+            if ($pushed -ne $tag) { throw "Tag $pushed does not match VERSION ($tag)." }
+          }
+          $setup = "artifacts/PsGuiBuilder-Setup-$version.exe"
+          $sum = "$setup.sha256"
+          $notes = "Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
+          $exists = $false
+          gh release view $tag --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -eq 0) { $exists = $true }
+          if ($exists) {
+            gh release upload $tag $setup $sum --repo $env:GITHUB_REPOSITORY --clobber
+          } else {
+            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title $tag --notes $notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
 
   linux:
     name: Core tests on Linux

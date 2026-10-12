@@ -24,7 +24,9 @@ The `command-tree.json` drives the entire cascading menus and parameter forms. A
 - `src/PsGuiBuilder.ElevatedHost` — small helper started with `runas`. It only receives a pipe name on the command line.
 - `src/PsGuiBuilder.PowerShell` — optional in-process PowerShell 7 host for non-elevated runs.
 - `tests/PsGuiBuilder.Tests` — loader, cascade, quoting, and protocol tests.
-- `command-tree.json` — the menu and parameter source of truth.
+- `command-tree.json` — the menu and parameter source of truth. An installed build copies that default into `%APPDATA%\PsGuiBuilder\command-tree.json` on first launch and loads the user copy after that, so an upgrade can replace the Program Files default without touching edits. `--tree` still wins. `PsGuiBuilder.installed` beside the executable marks an installed build; a dev build does not seed the user file.
+- `VERSION` — the app and installer version, `major.minor.patch`.
+- `installer/` — Inno Setup script and the self-contained win-x64 publish script.
 
 ## Elevated execution
 

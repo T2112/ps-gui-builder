@@ -18,6 +18,24 @@ A Windows GUI application that provides a guided, cascading searchable menu inte
 - Executes the filled command in an elevated PowerShell session and shows results.
 - Offers to repeat the same action with new parameters or return to the start.
 
+## Install
+
+The installer is a self-contained 64-bit Windows app for .NET 8. The machine does not need the .NET runtime installed. PowerShell 7 is still the default host for the commands the app runs.
+
+On Windows, with [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+
+```powershell
+.\installer\build.ps1
+```
+
+That publishes `PsGuiBuilder` and `PsGuiBuilder.ElevatedHost` as self-contained `win-x64` builds, including `command-tree.json`, and writes `artifacts\PsGuiBuilder-Setup-<version>.exe` plus a `.sha256`. The version comes from the `VERSION` file.
+
+The setup program shows the LICENSE, installs to `C:\Program Files\PsGuiBuilder`, registers an uninstaller, adds a Start menu shortcut, and offers an optional desktop shortcut. Publisher and copyright name Thomas Schueler, personal project.
+
+The Program Files copy of `command-tree.json` is the default. The first launch of an installed build copies it to `%APPDATA%\PsGuiBuilder\command-tree.json` and uses that file from then on. Edit the AppData copy. An upgrade replaces the Program Files default and does not overwrite the AppData file. Delete the AppData file to seed a new copy from the upgraded default. `--tree path\to\command-tree.json` overrides both. A dev build does not create the AppData file unless it is already there.
+
+Uninstall leaves the AppData command tree in place.
+
 ## Build and run
 
 The desktop app is a Windows .NET 8 WPF program. The core tests also run on Linux.
@@ -41,13 +59,13 @@ dotnet run --project src/PsGuiBuilder
 dotnet test tests/PsGuiBuilder.Tests/PsGuiBuilder.Tests.csproj
 ```
 
-The app loads `command-tree.json` from the build output (the file is copied there), from the current directory, or from `--tree path\to\command-tree.json`.
+The app loads `command-tree.json` from `%APPDATA%\PsGuiBuilder\` when that file exists, then from the build output, the current directory, or `--tree path\to\command-tree.json`.
 
 Check **Run as administrator** to approve a UAC prompt and execute in an elevated PowerShell process. Leave it unchecked to run as the current user. **Run inside this app** uses the embedded PowerShell 7 engine instead of a separate process. That mode cannot elevate, and it cannot run a command that asks for Windows PowerShell 5.1. Commands can also ask for a service sign-in before they run. A credential sign-in opens an empty masked dialog on every run, including Run again. It does not offer the current Windows user and it does not reuse the previous password. While that dialog or a Connect window is open, the app does not open another window. Results are written to the output pane. Point `PSGUIBUILDER_SHELL` at a PowerShell 7 executable if you do not want the app to search for `pwsh`. A command that sets `"shell": "windows-powershell"` still uses Windows PowerShell 5.1.
 
 The last box on the command row looks up any installed cmdlet with `Get-Command` when it is not in `command-tree.json`.
 
-GitHub Actions builds and tests on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. The workflow does not publish releases.
+GitHub Actions builds, tests, and creates the installer on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. A manual run from `main`, or a `v*` tag, publishes a private GitHub Release `v<VERSION>` with `PsGuiBuilder-Setup-<version>.exe` and its `.sha256`. The repository stays private.
 
 ## Status
 
