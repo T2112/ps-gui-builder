@@ -69,7 +69,7 @@ Favorites / Common is the curated `command-tree.json`. Installed commands lists 
 
 If a command needs a module that is not installed, Shellmason says what it will install and waits for Yes. Gallery modules use `Install-Module -Scope CurrentUser`, including the NuGet provider and a temporary trust of PSGallery. RSAT modules such as ActiveDirectory use `Add-WindowsCapability` through the existing administrator prompt. Nothing is installed without that Yes.
 
-GitHub Actions builds, tests, and creates the installer on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. A manual run from `main`, or a `v*` tag, publishes a normal GitHub Release `v<VERSION>` (not a draft and not a prerelease) with `Shellmason-Setup-<version>.exe` and its `.sha256`. That release is public when the repository is public. Pull requests do not publish a release.
+GitHub Actions builds, tests, and creates the installer on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. A manual run from `main`, or a `v*` tag, publishes a normal GitHub Release `v<VERSION>` (not a draft and not a prerelease) with `Shellmason-Setup-<version>.exe` and its `.sha256`. The release notes are the matching `CHANGELOG.md` section plus the personal-ownership note. The release fails when that section is missing. That release is public when the repository is public. Pull requests do not publish a release.
 
 ## Status
 
