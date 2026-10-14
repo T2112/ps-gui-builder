@@ -1,6 +1,6 @@
 {
-  "version": "0.2",
-  "description": "Default commands for the personal PowerShell GUI Command Builder by Thomas Schueler. Personal side project, built on personal time with personal equipment. No employer resources.",
+  "version": "0.3",
+  "description": "Default commands for Shellmason, a personal side project by Thomas Schueler. Built on personal time with personal equipment. No employer resources.",
   "categories": {
     "Files and folders": {
       "description": "List, copy, move, and inspect files",
@@ -188,6 +188,70 @@
               "default": "SHA256"
             }
           ]
+        },
+        "Search a folder": {
+          "cmdlet": "Get-ChildItem",
+          "requiresAdmin": false,
+          "template": "Get-ChildItem -Path \"{path}\" -Filter \"{filter}\" {Recurse}",
+          "sentence": "I want files named {filter} in {path}, recurse {Recurse}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "folder",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Users"
+            },
+            {
+              "name": "filter",
+              "label": "name filter",
+              "type": "string",
+              "required": true,
+              "placeholder": "*.log"
+            },
+            {
+              "name": "Recurse",
+              "label": "include subfolders",
+              "type": "switch",
+              "required": false,
+              "default": "false"
+            }
+          ]
+        },
+        "New folder": {
+          "cmdlet": "New-Item",
+          "requiresAdmin": false,
+          "template": "New-Item -Path \"{path}\" -ItemType Directory",
+          "sentence": "I want a new folder at {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "folder",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Temp\\Notes"
+            }
+          ]
+        },
+        "Rename an item": {
+          "cmdlet": "Rename-Item",
+          "requiresAdmin": false,
+          "template": "Rename-Item -Path \"{path}\" -NewName \"{newName}\"",
+          "sentence": "I want to rename {path} to {newName}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "item",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "newName",
+              "label": "new name",
+              "type": "string",
+              "required": true
+            }
+          ]
         }
       }
     },
@@ -292,6 +356,20 @@
               "default": "30"
             }
           ]
+        },
+        "Get a process by id": {
+          "cmdlet": "Get-Process",
+          "requiresAdmin": false,
+          "template": "Get-Process -Id {processId}",
+          "sentence": "I want the process with id {processId}",
+          "parameters": [
+            {
+              "name": "processId",
+              "label": "process id",
+              "type": "int",
+              "required": true
+            }
+          ]
         }
       }
     },
@@ -385,6 +463,21 @@
                 "Disabled"
               ],
               "default": "Automatic"
+            }
+          ]
+        },
+        "Get a service": {
+          "cmdlet": "Get-Service",
+          "requiresAdmin": false,
+          "template": "Get-Service -Name \"{name}\"",
+          "sentence": "I want the service named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "service",
+              "type": "string",
+              "required": true,
+              "placeholder": "Spooler"
             }
           ]
         }
@@ -626,6 +719,38 @@
             }
           ],
           "module": "SmbShare"
+        },
+        "Test a network connection": {
+          "cmdlet": "Test-NetConnection",
+          "requiresAdmin": false,
+          "template": "Test-NetConnection -ComputerName \"{computerName}\"",
+          "sentence": "I want to test the connection to {computerName}",
+          "parameters": [
+            {
+              "name": "computerName",
+              "label": "computer",
+              "type": "string",
+              "required": true,
+              "placeholder": "localhost"
+            }
+          ],
+          "module": "NetTCPIP"
+        },
+        "List TCP connections": {
+          "cmdlet": "Get-NetTCPConnection",
+          "requiresAdmin": false,
+          "template": "Get-NetTCPConnection",
+          "sentence": "I want the TCP connections on this computer",
+          "parameters": [],
+          "module": "NetTCPIP"
+        },
+        "List IP addresses": {
+          "cmdlet": "Get-NetIPAddress",
+          "requiresAdmin": false,
+          "template": "Get-NetIPAddress",
+          "sentence": "I want the IP addresses on this computer",
+          "parameters": [],
+          "module": "NetTCPIP"
         }
       }
     },
@@ -842,6 +967,21 @@
             }
           ],
           "shell": "windows-powershell"
+        },
+        "List event logs": {
+          "cmdlet": "Get-WinEvent",
+          "requiresAdmin": false,
+          "template": "Get-WinEvent -ListLog \"{logName}\"",
+          "sentence": "I want the event log named {logName}",
+          "parameters": [
+            {
+              "name": "logName",
+              "label": "log",
+              "type": "string",
+              "required": true,
+              "placeholder": "Application"
+            }
+          ]
         }
       }
     },
@@ -962,6 +1102,45 @@
               "required": true
             }
           ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Get a local user": {
+          "cmdlet": "Get-LocalUser",
+          "requiresAdmin": false,
+          "template": "Get-LocalUser -Name \"{name}\"",
+          "sentence": "I want the local user named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "user",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "Get a local group": {
+          "cmdlet": "Get-LocalGroup",
+          "requiresAdmin": false,
+          "template": "Get-LocalGroup -Name \"{name}\"",
+          "sentence": "I want the local group named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "group",
+              "type": "string",
+              "required": true,
+              "placeholder": "Administrators"
+            }
+          ],
+          "module": "Microsoft.PowerShell.LocalAccounts"
+        },
+        "List local groups": {
+          "cmdlet": "Get-LocalGroup",
+          "requiresAdmin": false,
+          "template": "Get-LocalGroup",
+          "sentence": "I want the local groups on this computer",
+          "parameters": [],
           "module": "Microsoft.PowerShell.LocalAccounts"
         }
       }
@@ -1160,6 +1339,21 @@
               "required": true
             }
           ]
+        },
+        "Get a registry item": {
+          "cmdlet": "Get-Item",
+          "requiresAdmin": false,
+          "template": "Get-Item -Path \"{path}\"",
+          "sentence": "I want the registry key at {path}",
+          "parameters": [
+            {
+              "name": "path",
+              "label": "key",
+              "type": "string",
+              "required": true,
+              "placeholder": "HKCU:\\Software"
+            }
+          ]
         }
       }
     },
@@ -1344,6 +1538,21 @@
               "name": "id",
               "label": "job id",
               "type": "int",
+              "required": true
+            }
+          ],
+          "module": "PrintManagement"
+        },
+        "Get a printer": {
+          "cmdlet": "Get-Printer",
+          "requiresAdmin": false,
+          "template": "Get-Printer -Name \"{name}\"",
+          "sentence": "I want the printer named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "printer",
+              "type": "string",
               "required": true
             }
           ],
@@ -1925,6 +2134,194 @@
           "template": "Get-VMSwitch",
           "sentence": "I want the Hyper-V virtual switches",
           "parameters": []
+        }
+      }
+    },
+    "Certificates": {
+      "description": "Certificates in the current user and local machine stores",
+      "options": {
+        "List user certificates": {
+          "cmdlet": "Get-ChildItem",
+          "requiresAdmin": false,
+          "template": "Get-ChildItem -Path \"Cert:\\CurrentUser\\My\"",
+          "sentence": "I want the certificates in the current user personal store",
+          "parameters": []
+        },
+        "List machine certificates": {
+          "cmdlet": "Get-ChildItem",
+          "requiresAdmin": true,
+          "template": "Get-ChildItem -Path \"Cert:\\LocalMachine\\My\"",
+          "sentence": "I want the certificates in the local machine personal store",
+          "parameters": []
+        }
+      }
+    },
+    "Apps and packages": {
+      "description": "AppX packages and Package Management",
+      "options": {
+        "List Appx packages": {
+          "cmdlet": "Get-AppxPackage",
+          "requiresAdmin": false,
+          "template": "Get-AppxPackage",
+          "sentence": "I want the Appx packages installed for the current user",
+          "parameters": [],
+          "module": "Appx"
+        },
+        "Get an Appx package": {
+          "cmdlet": "Get-AppxPackage",
+          "requiresAdmin": false,
+          "template": "Get-AppxPackage -Name \"{name}\"",
+          "sentence": "I want the Appx package named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "package",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Appx"
+        },
+        "List installed packages": {
+          "cmdlet": "Get-Package",
+          "requiresAdmin": false,
+          "template": "Get-Package",
+          "sentence": "I want the packages Package Management can see",
+          "parameters": [],
+          "module": "PackageManagement"
+        },
+        "Get a package": {
+          "cmdlet": "Get-Package",
+          "requiresAdmin": false,
+          "template": "Get-Package -Name \"{name}\"",
+          "sentence": "I want the package named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "package",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "PackageManagement"
+        }
+      }
+    },
+    "Firewall": {
+      "description": "Windows Firewall rules and profiles",
+      "options": {
+        "List firewall rules": {
+          "cmdlet": "Get-NetFirewallRule",
+          "requiresAdmin": false,
+          "template": "Get-NetFirewallRule",
+          "sentence": "I want the Windows Firewall rules",
+          "parameters": [],
+          "module": "NetSecurity"
+        },
+        "Show a firewall rule": {
+          "cmdlet": "Get-NetFirewallRule",
+          "requiresAdmin": false,
+          "template": "Get-NetFirewallRule -DisplayName \"{displayName}\"",
+          "sentence": "I want the firewall rule named {displayName}",
+          "parameters": [
+            {
+              "name": "displayName",
+              "label": "rule",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "NetSecurity"
+        },
+        "Enable a firewall rule": {
+          "cmdlet": "Enable-NetFirewallRule",
+          "requiresAdmin": true,
+          "template": "Enable-NetFirewallRule -DisplayName \"{displayName}\"",
+          "sentence": "I want to enable the firewall rule named {displayName}",
+          "parameters": [
+            {
+              "name": "displayName",
+              "label": "rule",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "NetSecurity"
+        },
+        "Disable a firewall rule": {
+          "cmdlet": "Disable-NetFirewallRule",
+          "requiresAdmin": true,
+          "template": "Disable-NetFirewallRule -DisplayName \"{displayName}\"",
+          "sentence": "I want to disable the firewall rule named {displayName}",
+          "parameters": [
+            {
+              "name": "displayName",
+              "label": "rule",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "NetSecurity"
+        },
+        "List firewall profiles": {
+          "cmdlet": "Get-NetFirewallProfile",
+          "requiresAdmin": false,
+          "template": "Get-NetFirewallProfile",
+          "sentence": "I want the Windows Firewall profiles",
+          "parameters": [],
+          "module": "NetSecurity"
+        }
+      }
+    },
+    "Windows features": {
+      "description": "Optional features and Windows capabilities",
+      "options": {
+        "List optional features": {
+          "cmdlet": "Get-WindowsOptionalFeature",
+          "requiresAdmin": true,
+          "template": "Get-WindowsOptionalFeature -Online",
+          "sentence": "I want the optional Windows features",
+          "parameters": [],
+          "module": "Dism"
+        },
+        "Get an optional feature": {
+          "cmdlet": "Get-WindowsOptionalFeature",
+          "requiresAdmin": true,
+          "template": "Get-WindowsOptionalFeature -Online -FeatureName \"{featureName}\"",
+          "sentence": "I want the optional feature named {featureName}",
+          "parameters": [
+            {
+              "name": "featureName",
+              "label": "feature",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "module": "Dism"
+        },
+        "List Windows capabilities": {
+          "cmdlet": "Get-WindowsCapability",
+          "requiresAdmin": true,
+          "template": "Get-WindowsCapability -Online",
+          "sentence": "I want the Windows capabilities",
+          "parameters": [],
+          "module": "Dism"
+        },
+        "Get a Windows capability": {
+          "cmdlet": "Get-WindowsCapability",
+          "requiresAdmin": true,
+          "template": "Get-WindowsCapability -Online -Name \"{name}\"",
+          "sentence": "I want the Windows capability named {name}",
+          "parameters": [
+            {
+              "name": "name",
+              "label": "capability",
+              "type": "string",
+              "required": true,
+              "placeholder": "Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0"
+            }
+          ],
+          "module": "Dism"
         }
       }
     }

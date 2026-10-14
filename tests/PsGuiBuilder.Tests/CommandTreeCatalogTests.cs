@@ -32,13 +32,17 @@ public class CommandTreeCatalogTests
                 "Active Directory",
                 "Exchange Online",
                 "Microsoft Graph and Entra",
-                "Hyper-V"
+                "Hyper-V",
+                "Certificates",
+                "Apps and packages",
+                "Firewall",
+                "Windows features"
             },
             categories);
 
         var commands = new List<CommandDefinition>();
         Collect(_tree.Root, commands);
-        Assert.Equal(86, commands.Count);
+        Assert.Equal(115, commands.Count);
         Assert.Equal(commands.Count, commands.Select(command => command.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.Contains("personal side project", _tree.Description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("no employer resources", _tree.Description, StringComparison.OrdinalIgnoreCase);

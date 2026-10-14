@@ -3,9 +3,7 @@
 // Not related to any employment.
 
 using System.Windows;
-using PsGuiBuilder.Core.Building;
 using PsGuiBuilder.Core.CommandTree;
-using PsGuiBuilder.Execution;
 using PsGuiBuilder.ViewModels;
 
 namespace PsGuiBuilder;
@@ -23,7 +21,7 @@ public partial class App : Application
                 return;
             }
 
-            MessageBox.Show(args.Exception.Message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(args.Exception.Message, ProductName.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
             Shutdown(1);
         };
@@ -35,14 +33,14 @@ public partial class App : Application
             var window = new MainWindow
             {
                 LoadedTreePath = path,
-                DataContext = new MainViewModel(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog())
+                DataContext = MainViewModel.CreateDefault(tree)
             };
             MainWindow = window;
             window.Show();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, ProductName.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

@@ -8,6 +8,7 @@ using PsGuiBuilder.Core.Building;
 using PsGuiBuilder;
 using PsGuiBuilder.Core.Cascade;
 using PsGuiBuilder.Core.CommandTree;
+using PsGuiBuilder.Core.Discovery;
 using PsGuiBuilder.Core.Execution;
 using PsGuiBuilder.Execution;
 
@@ -32,6 +33,8 @@ public sealed class MainViewModel : ObservableObject
     private readonly ICommandExecutor _executor;
     private readonly CommandMetadataProbe _probe;
     private readonly ICredentialPrompt _signIn;
+    private readonly IModuleInstallGate? _modules;
+    private readonly IUserConfirmation? _confirmation;
     private readonly OutputAdapter _output;
     private readonly List<string> _redact = new();
     private readonly List<FieldSegmentViewModel> _fields = new();
@@ -43,27 +46,47 @@ public sealed class MainViewModel : ObservableObject
     private string _statusText = "";
     private string _commandSummary = "";
     private string _elevationHint = "";
+    private string _executionText = "";
+    private string _pipelineText = "";
+    private string? _snapshotJson;
+    private string? _selectedParameterSet;
+    private bool _updatingSets;
+    private bool _pipelineReady = true;
     private bool _runElevated;
     private bool _inProcess;
     private bool _isRunning;
     private bool _hasCompletedRun;
+    private bool _showBrowser;
     private CommandDefinition? _genericCommand;
     private string _cmdletQuery = "";
 
-    public MainViewModel(CommandTree tree, ICommandExecutor executor, CommandMetadataProbe probe, ICredentialPrompt signIn)
+    public MainViewModel(
+        CommandTree tree,
+        ICommandExecutor executor,
+        CommandMetadataProbe probe,
+        ICredentialPrompt signIn,
+        IModuleInstallGate? modules = null,
+        IUserConfirmation? confirmation = null,
+        IDiscoverySource? discovery = null)
     {
         _session = new CascadeSession(tree);
         _executor = executor;
         _probe = probe;
         _signIn = signIn;
+        _modules = modules;
+        _confirmation = confirmation;
         _output = new OutputAdapter(this);
+        Browser = new CommandBrowserViewModel(discovery ?? new DiscoverySession(), ApplyDiscoveredAsync);
         Levels.Add(CreateLevel(0));
         RunCommand = new AsyncRelayCommand(RunAsync, () => CanRun);
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
         StartOverCommand = new RelayCommand(StartOver, () => !IsRunning);
         LookupCommand = new AsyncRelayCommand(LookupAsync, () => IsIdle && !string.IsNullOrWhiteSpace(CmdletQuery));
-        StatusText = "Choose a command, or look up any cmdlet.";
+        StatusText = "Choose a favorite, or browse installed commands.";
     }
+
+    public static MainViewModel CreateDefault(CommandTree tree) =>
+        new(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog(), new ModuleInstallCoordinator(), new MessageBoxConfirmation());
 
     public ObservableCollection<CascadeLevelViewModel> Levels { get; } = new();
 
@@ -76,6 +99,70 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand StartOverCommand { get; }
 
     public AsyncRelayCommand LookupCommand { get; }
+
+    public CommandBrowserViewModel Browser { get; }
+
+    public ObservableCollection<string> ParameterSetNames { get; } = new();
+
+    public bool ShowBrowser
+    {
+        get => _showBrowser;
+        set
+        {
+            if (!SetProperty(ref _showBrowser, value))
+                return;
+
+            OnPropertyChanged(nameof(ShowFavorites));
+            if (value)
+                _ = Browser.OpenAsync();
+        }
+    }
+
+    public bool ShowFavorites
+    {
+        get => !_showBrowser;
+        set
+        {
+            if (value)
+                ShowBrowser = false;
+        }
+    }
+
+    public bool HasParameterSets => ParameterSetNames.Count > 0;
+
+    public string? SelectedParameterSet
+    {
+        get => _selectedParameterSet;
+        set
+        {
+            if (!SetProperty(ref _selectedParameterSet, value))
+                return;
+
+            if (_updatingSets || _snapshotJson is null || string.IsNullOrWhiteSpace(value))
+                return;
+
+            try
+            {
+                var shell = _formCommand?.Shell ?? PowerShellEdition.PowerShell7;
+                var view = CommandMetadataMapper.Read(_snapshotJson, value, shell);
+                ShowGeneric(view.Command);
+            }
+            catch (ArgumentException ex)
+            {
+                ValidationText = ex.Message;
+            }
+        }
+    }
+
+    public string PipelineText
+    {
+        get => _pipelineText;
+        set
+        {
+            if (SetProperty(ref _pipelineText, value ?? ""))
+                UpdatePreview();
+        }
+    }
 
     public string CmdletQuery
     {
@@ -152,7 +239,7 @@ public sealed class MainViewModel : ObservableObject
 
     public string RunButtonText => HasCompletedRun ? "Run again" : "Run";
 
-    public bool CanRun => !IsRunning && _lastBuild is { IsComplete: true };
+    public bool CanRun => !IsRunning && _pipelineReady && _lastBuild is { IsComplete: true };
 
     public bool RunElevated
     {
@@ -197,6 +284,7 @@ public sealed class MainViewModel : ObservableObject
     private void OnStructureChanged()
     {
         _genericCommand = null;
+        ClearMetadata();
         while (Levels.Count > _session.Levels.Count)
             Levels.RemoveAt(Levels.Count - 1);
 
@@ -237,7 +325,8 @@ public sealed class MainViewModel : ObservableObject
         if (command.Shell == PowerShellEdition.WindowsPowerShell5)
             InProcess = false;
 
-        CommandSummary = command.PathDisplay + "    ·    " + command.Summary;
+        CommandSummary = command.PathDisplay + "    ·    " + command.Summary
+            + (string.IsNullOrWhiteSpace(command.Description) ? "" : Environment.NewLine + command.Description);
         ElevationHint = DescribeCommand(command);
         OnPropertyChanged(nameof(CanRunInProcess));
 
@@ -279,8 +368,24 @@ public sealed class MainViewModel : ObservableObject
             values[field.Parameter.Name] = ReadValue(field);
 
         _lastBuild = PowerShellCommandBuilder.Build(_formCommand, values);
-        PreviewText = ScriptComposer.ComposePreview(_formCommand, _lastBuild.CommandText);
-        ValidationText = string.Join(Environment.NewLine, _lastBuild.Errors);
+        var errors = new List<string>(_lastBuild.Errors);
+        if (!ScriptComposer.TryApplyPipeline(_lastBuild.CommandText, PipelineText, out var previewLine, out var pipelineError)
+            || !ScriptComposer.TryApplyPipeline(_lastBuild.ExecutionText, PipelineText, out var executionLine, out _))
+        {
+            _pipelineReady = false;
+            _executionText = _lastBuild.ExecutionText;
+            PreviewText = ScriptComposer.ComposePreview(_formCommand, _lastBuild.CommandText);
+            if (pipelineError is not null)
+                errors.Add(pipelineError);
+        }
+        else
+        {
+            _pipelineReady = true;
+            _executionText = executionLine;
+            PreviewText = ScriptComposer.ComposePreview(_formCommand, previewLine);
+        }
+
+        ValidationText = string.Join(Environment.NewLine, errors);
         OnPropertyChanged(nameof(CanRun));
         RefreshCommands();
     }
@@ -291,7 +396,7 @@ public sealed class MainViewModel : ObservableObject
             return;
 
         var command = _formCommand;
-        var executionText = _lastBuild.ExecutionText;
+        var executionText = _executionText;
         var commandSecrets = new Dictionary<string, string>(_lastBuild.Secrets, StringComparer.Ordinal);
         _redact.Clear();
         var preview = PreviewText;
@@ -308,6 +413,25 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
+            if (_modules is not null && !string.IsNullOrWhiteSpace(command.Module))
+            {
+                StatusText = "Checking whether " + command.Module + " is installed…";
+                var plan = await _modules.FindMissingAsync(command.Module, command.Shell, _runCts.Token).ConfigureAwait(true);
+                if (plan is not null)
+                {
+                    if (_confirmation is null || !_confirmation.Confirm(plan.Summary))
+                    {
+                        StatusText = "Install was not confirmed. Nothing was installed, and the command was not run.";
+                        return;
+                    }
+
+                    StatusText = plan.RequiresAdmin
+                        ? "Waiting for administrator approval to install " + plan.ModuleName + "…"
+                        : "Installing " + plan.ModuleName + "…";
+                    await _modules.InstallAsync(plan, _runCts.Token).ConfigureAwait(true);
+                }
+            }
+
             var outcome = await LaunchDriver.RunAsync(
                 credentialSignIn,
                 interactiveSignIn,
@@ -400,7 +524,7 @@ public sealed class MainViewModel : ObservableObject
             IsRunning = false;
             var deferred = ExternalWindows.Release();
             if (!string.IsNullOrEmpty(deferred))
-                System.Windows.MessageBox.Show(deferred, "PowerShell GUI Command Builder");
+                System.Windows.MessageBox.Show(deferred, ProductName.Name);
         }
     }
 
@@ -415,17 +539,14 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var result = await _probe.LookupAsync(name, CancellationToken.None).ConfigureAwait(true);
-            if (result.Command is null)
+            if (result.Command is null || result.SnapshotJson is null)
             {
                 StatusText = result.Error ?? "Lookup failed.";
                 return;
             }
 
-            _session.Reset();
-            Levels.Clear();
-            Levels.Add(CreateLevel(0));
-            _genericCommand = result.Command;
-            UpdateForm();
+            var view = CommandMetadataMapper.Read(result.SnapshotJson);
+            ShowMetadata(result.SnapshotJson, view);
             StatusText = result.Notice is null
                 ? "Loaded " + result.Command.Cmdlet + " from Get-Command."
                 : result.Notice;
@@ -443,12 +564,78 @@ public sealed class MainViewModel : ObservableObject
     private void StartOver()
     {
         _genericCommand = null;
+        ClearMetadata();
         _session.Reset();
         Levels.Clear();
         Levels.Add(CreateLevel(0));
         UpdateForm();
-        StatusText = "Choose a command, or look up any cmdlet.";
+        StatusText = "Choose a favorite, or browse installed commands.";
         RefreshCommands();
+    }
+
+    private async Task ApplyDiscoveredAsync(DiscoveredCommand command)
+    {
+        var qualified = string.IsNullOrWhiteSpace(command.Module)
+            ? command.Name
+            : command.Module + "\\" + command.Name;
+        IsRunning = true;
+        StatusText = "Reading " + command.Name + "…";
+        try
+        {
+            var result = await _probe.LookupAsync(qualified, Browser.Edition, CancellationToken.None).ConfigureAwait(true);
+            if (result.Command is null || result.SnapshotJson is null)
+            {
+                StatusText = result.Error ?? "Lookup failed.";
+                return;
+            }
+
+            var view = CommandMetadataMapper.Read(result.SnapshotJson, null, Browser.Edition);
+            ShowMetadata(result.SnapshotJson, view);
+            StatusText = result.Notice ?? "Loaded " + view.Command.Cmdlet + " from " + Browser.EditionLabel + ".";
+        }
+        catch (Exception ex)
+        {
+            StatusText = ex.Message;
+        }
+        finally
+        {
+            IsRunning = false;
+        }
+    }
+
+    private void ShowMetadata(string snapshotJson, CommandMetadataView view)
+    {
+        _snapshotJson = snapshotJson;
+        _updatingSets = true;
+        ParameterSetNames.Clear();
+        foreach (var name in view.ParameterSets)
+            ParameterSetNames.Add(name);
+
+        _selectedParameterSet = view.ParameterSet;
+        OnPropertyChanged(nameof(SelectedParameterSet));
+        OnPropertyChanged(nameof(HasParameterSets));
+        _updatingSets = false;
+        ShowGeneric(view.Command);
+    }
+
+    private void ShowGeneric(CommandDefinition command)
+    {
+        _session.Reset();
+        Levels.Clear();
+        Levels.Add(CreateLevel(0));
+        _genericCommand = command;
+        UpdateForm();
+    }
+
+    private void ClearMetadata()
+    {
+        _snapshotJson = null;
+        _updatingSets = true;
+        ParameterSetNames.Clear();
+        _selectedParameterSet = null;
+        _updatingSets = false;
+        OnPropertyChanged(nameof(SelectedParameterSet));
+        OnPropertyChanged(nameof(HasParameterSets));
     }
 
     private void RefreshCommands()

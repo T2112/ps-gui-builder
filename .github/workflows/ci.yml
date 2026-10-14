@@ -40,10 +40,10 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: PsGuiBuilder-Setup
+          name: Shellmason-Setup
           path: |
-            artifacts/PsGuiBuilder-Setup-*.exe
-            artifacts/PsGuiBuilder-Setup-*.exe.sha256
+            artifacts/Shellmason-Setup-*.exe
+            artifacts/Shellmason-Setup-*.exe.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -60,9 +60,9 @@ jobs:
             $pushed = $env:GITHUB_REF.Substring("refs/tags/".Length)
             if ($pushed -ne $tag) { throw "Tag $pushed does not match VERSION ($tag)." }
           }
-          $setup = "artifacts/PsGuiBuilder-Setup-$version.exe"
+          $setup = "artifacts/Shellmason-Setup-$version.exe"
           $sum = "$setup.sha256"
-          $notes = "Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
+          $notes = "Shellmason. Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
           $exists = $false
           gh release view $tag --repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -eq 0) { $exists = $true }

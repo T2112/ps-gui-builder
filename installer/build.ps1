@@ -68,7 +68,7 @@ $rootIss = "$root".Replace('\', '/')
 & $iscc "/DAppVersion=$version" "/DPublishDir=$publishIss" "/DRepoRoot=$rootIss" (Join-Path $PSScriptRoot "PsGuiBuilder.iss")
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed." }
 
-$setup = Join-Path $root "artifacts\PsGuiBuilder-Setup-$version.exe"
+$setup = Join-Path $root "artifacts\Shellmason-Setup-$version.exe"
 if (-not (Test-Path $setup)) { throw "Installer was not created at $setup." }
 
 $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
