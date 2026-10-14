@@ -17,9 +17,9 @@ public class CascadeSessionTests
     {
         var level = Assert.Single(_session.Levels);
         Assert.Equal("I Want To:", level.Prompt);
-        Assert.Equal(15, level.Options.Count);
+        Assert.Equal(19, level.Options.Count);
         Assert.Equal("Files and folders", level.Options[0].Name);
-        Assert.Equal("Hyper-V", level.Options[^1].Name);
+        Assert.Equal("Windows features", level.Options[^1].Name);
         Assert.Null(_session.SelectedCommand);
     }
 
@@ -32,7 +32,7 @@ public class CascadeSessionTests
         var match = Assert.Single(filtered);
         Assert.Equal("Files and folders", match.Name);
         Assert.Null(_session.Levels[0].SelectedKey);
-        Assert.Equal(15, _session.Levels[0].Options.Count);
+        Assert.Equal(19, _session.Levels[0].Options.Count);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class CascadeSessionTests
     {
         _session.SetFilter(0, "map");
         _session.SetFilter(0, "  ");
-        Assert.Equal(15, _session.Levels[0].FilteredOptions.Count);
+        Assert.Equal(19, _session.Levels[0].FilteredOptions.Count);
     }
 
     [Fact]

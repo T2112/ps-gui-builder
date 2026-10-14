@@ -12,7 +12,7 @@
     <AssemblyName>PsGuiBuilder</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\PsGuiBuilder.ico</ApplicationIcon>
-    <Description>Personal PowerShell GUI Command Builder.</Description>
+    <Description>Shellmason. Personal side project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment.</Description>
   </PropertyGroup>
 
   <ItemGroup>

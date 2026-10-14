@@ -9,6 +9,33 @@ namespace PsGuiBuilder.Core.Building;
 
 public static class ScriptComposer
 {
+    public static bool TryApplyPipeline(string renderedCommand, string? pipeline, out string commandText, out string? error)
+    {
+        commandText = renderedCommand ?? "";
+        error = null;
+        if (string.IsNullOrWhiteSpace(pipeline))
+            return true;
+
+        var text = pipeline.Trim().Trim('|').Trim();
+        if (text.Length == 0)
+            return true;
+
+        if (text.Contains('\r') || text.Contains('\n'))
+        {
+            error = "The pipeline step must be a single line.";
+            return false;
+        }
+
+        if (text.Contains('`'))
+        {
+            error = "The pipeline step cannot contain a backtick.";
+            return false;
+        }
+
+        commandText = commandText + " | " + text;
+        return true;
+    }
+
     public static string ComposePreview(CommandDefinition command, string renderedCommand) =>
         Compose(command, renderedCommand, signInUsername: null, includeCredentialSetup: false);
 

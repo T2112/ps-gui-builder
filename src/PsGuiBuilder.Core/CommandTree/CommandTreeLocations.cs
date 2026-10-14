@@ -7,7 +7,8 @@ namespace PsGuiBuilder.Core.CommandTree;
 public static class CommandTreeLocations
 {
     public const string FileName = "command-tree.json";
-    public const string UserFolderName = "PsGuiBuilder";
+    public const string UserFolderName = "Shellmason";
+    public const string LegacyUserFolderName = "PsGuiBuilder";
     public const string InstalledMarkerName = "PsGuiBuilder.installed";
 
     public static string UserFile(string applicationData) =>
@@ -79,7 +80,7 @@ public static class CommandTreeLocations
         }
 
         throw new FileNotFoundException(
-            "command-tree.json was not found. Pass --tree <path>, or place the file in %APPDATA%\\PsGuiBuilder\\.");
+            "command-tree.json was not found. Pass --tree <path>, or place the file in %APPDATA%\\" + UserFolderName + "\\.");
     }
 
     private static string? ExplicitPath(IReadOnlyList<string> args)

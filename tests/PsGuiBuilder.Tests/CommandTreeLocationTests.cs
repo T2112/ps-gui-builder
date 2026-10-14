@@ -120,7 +120,7 @@ public class CommandTreeLocationTests
     public void Missing_tree_names_the_user_folder()
     {
         var error = Assert.Throws<FileNotFoundException>(() => Resolve(Array.Empty<string>()));
-        Assert.Contains("%APPDATA%\\PsGuiBuilder\\", error.Message, StringComparison.Ordinal);
+        Assert.Contains("%APPDATA%\\Shellmason\\", error.Message, StringComparison.Ordinal);
     }
 
     private string Resolve(

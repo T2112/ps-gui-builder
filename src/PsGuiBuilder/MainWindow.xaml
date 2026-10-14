@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:PsGuiBuilder.Controls"
         xmlns:vm="clr-namespace:PsGuiBuilder.ViewModels"
-        Title="PowerShell GUI Command Builder"
+        Title="Shellmason"
         Icon="Assets/PsGuiBuilder.ico"
         Width="1120"
         Height="780"
@@ -136,16 +136,27 @@
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="0,0,0,14">
+      <Menu DockPanel.Dock="Right" Background="Transparent" VerticalAlignment="Top">
+        <MenuItem Header="_Help">
+          <MenuItem Header="Check for _updates" Click="CheckForUpdates" />
+          <MenuItem Header="_About" Click="ShowAbout" />
+        </MenuItem>
+      </Menu>
       <TextBlock DockPanel.Dock="Right"
                  Text="Personal project · Thomas Schueler"
                  VerticalAlignment="Bottom"
                  Foreground="#6F655C"
                  FontSize="12" />
       <StackPanel>
-        <TextBlock Text="PowerShell GUI Command Builder" FontSize="22" FontWeight="SemiBold" />
-        <TextBlock Text="Search down the tree, fill the sentence, then run it."
+        <TextBlock Text="Shellmason" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Text="Personal side project by Thomas Schueler. Built on personal time with personal equipment. No employer resources."
                    Foreground="#6F655C"
-                   Margin="0,2,0,0" />
+                   Margin="0,2,0,0"
+                   TextWrapping="Wrap" />
+        <TextBlock Text="Favorites are the curated list. Installed commands are discovered from the PowerShell you pick."
+                   Foreground="#6F655C"
+                   Margin="0,2,0,0"
+                   TextWrapping="Wrap" />
       </StackPanel>
     </DockPanel>
 
@@ -183,6 +194,26 @@
       <StackPanel>
         <Border Style="{StaticResource Card}" Padding="16,14">
           <StackPanel IsEnabled="{Binding IsIdle}">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+              <RadioButton Content="Favorites / Common"
+                           GroupName="CommandSource"
+                           IsChecked="{Binding ShowFavorites}"
+                           Margin="0,0,16,0" />
+              <RadioButton Content="Installed commands"
+                           GroupName="CommandSource"
+                           IsChecked="{Binding ShowBrowser}" />
+            </StackPanel>
+            <StackPanel>
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Setter Property="Visibility" Value="Visible" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowBrowser}" Value="True">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
               <ItemsControl ItemsSource="{Binding Levels}">
                 <ItemsControl.ItemsPanel>
@@ -210,11 +241,87 @@
                        Padding="10,8"
                        ToolTip="Cmdlet name, such as Get-ChildItem or ActiveDirectory\Get-ADUser" />
             </DockPanel>
-            <TextBlock Text="Or look up any installed cmdlet. The form comes from Get-Command, not from the tree."
+            <TextBlock Text="Or look up any installed cmdlet. The form comes from its metadata, not from the tree."
                        Foreground="#6F655C"
                        FontSize="12"
                        Margin="2,6,0,0"
                        TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Margin="0,4,0,0">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowBrowser}" Value="True">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
+              <StackPanel DataContext="{Binding Browser}">
+                <DockPanel Margin="0,0,0,8">
+                  <Button DockPanel.Dock="Right"
+                          Content="Refresh"
+                          Command="{Binding RefreshCommand}"
+                          Style="{StaticResource SecondaryButton}"
+                          Margin="8,0,0,0" />
+                  <ComboBox ItemsSource="{Binding Shells}"
+                            DisplayMemberPath="Label"
+                            SelectedItem="{Binding SelectedShell}"
+                            MinWidth="220" />
+                </DockPanel>
+                <DockPanel Margin="0,0,0,8">
+                  <TextBlock DockPanel.Dock="Left" Text="Search" VerticalAlignment="Center" Width="70" />
+                  <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="8,6" />
+                </DockPanel>
+                <WrapPanel Margin="0,0,0,8">
+                  <StackPanel Margin="0,0,12,6">
+                    <TextBlock Text="Module" FontSize="11" Foreground="#6F655C" />
+                    <ComboBox ItemsSource="{Binding Modules}" SelectedItem="{Binding SelectedModule}" MinWidth="180" />
+                  </StackPanel>
+                  <StackPanel Margin="0,0,12,6">
+                    <TextBlock Text="Noun" FontSize="11" Foreground="#6F655C" />
+                    <ComboBox ItemsSource="{Binding Nouns}" SelectedItem="{Binding SelectedNoun}" MinWidth="140" />
+                  </StackPanel>
+                  <StackPanel Margin="0,0,12,6">
+                    <TextBlock Text="Verb" FontSize="11" Foreground="#6F655C" />
+                    <ComboBox ItemsSource="{Binding Verbs}" SelectedItem="{Binding SelectedVerb}" MinWidth="120" />
+                  </StackPanel>
+                </WrapPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                  <RadioButton Content="Group by module" IsChecked="{Binding GroupByModule}" Margin="0,0,16,0" />
+                  <RadioButton Content="Group by noun" IsChecked="{Binding GroupByNoun}" Margin="0,0,16,0" />
+                  <CheckBox Content="Include aliases" IsChecked="{Binding IncludeAliases}" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Rows}"
+                         SelectedItem="{Binding SelectedRow}"
+                         MaxHeight="220"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Margin="0,2">
+                        <TextBlock Text="{Binding Group}" FontSize="11" Foreground="#6F655C" />
+                        <TextBlock>
+                          <Run Text="{Binding Title}" FontWeight="SemiBold" />
+                          <Run Text="  " />
+                          <Run Text="{Binding Detail}" Foreground="#6F655C" />
+                        </TextBlock>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <DockPanel Margin="0,8,0,0">
+                  <Button DockPanel.Dock="Right"
+                          Content="Use this command"
+                          Command="{Binding UseCommand}"
+                          Style="{StaticResource SecondaryButton}" />
+                  <TextBlock Text="{Binding StatusText}"
+                             TextWrapping="Wrap"
+                             Foreground="#6F655C"
+                             VerticalAlignment="Center" />
+                </DockPanel>
+              </StackPanel>
+            </StackPanel>
           </StackPanel>
         </Border>
 
@@ -239,6 +346,38 @@
                        Foreground="#6F655C"
                        TextWrapping="Wrap"
                        Margin="0,0,0,10" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8" IsEnabled="{Binding IsIdle}">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasParameterSets}" Value="True">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </StackPanel.Style>
+              <TextBlock Text="Parameter set" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ComboBox ItemsSource="{Binding ParameterSetNames}"
+                        SelectedItem="{Binding SelectedParameterSet}"
+                        MinWidth="220" />
+            </StackPanel>
+            <DockPanel Margin="0,0,0,8" IsEnabled="{Binding IsIdle}">
+              <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasCommand}" Value="True">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </DockPanel.Style>
+              <TextBlock DockPanel.Dock="Left" Text="Pipeline" VerticalAlignment="Center" Width="90" />
+              <TextBox Text="{Binding PipelineText, UpdateSourceTrigger=PropertyChanged}"
+                       Padding="8,6"
+                       ToolTip="Optional. Appended after the command, for example Select-Object Name | Out-GridView" />
+            </DockPanel>
             <ItemsControl ItemsSource="{Binding Segments}" IsEnabled="{Binding IsIdle}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -295,7 +434,7 @@
                   Style="{StaticResource SecondaryButton}"
                   IsEnabled="{Binding IsIdle}"
                   Margin="0,0,16,8"
-                  ToolTip="Adds commands from the installed default tree that are missing in %APPDATA%\PsGuiBuilder\command-tree.json. Entries you already edited stay as they are." />
+                  ToolTip="Adds commands from the installed default tree that are missing in %APPDATA%\Shellmason\command-tree.json. Entries you already edited stay as they are." />
           <CheckBox Content="Run as administrator"
                     IsChecked="{Binding RunElevated}"
                     IsEnabled="{Binding IsIdle}"

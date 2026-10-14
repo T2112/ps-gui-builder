@@ -40,10 +40,10 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: PsGuiBuilder-Setup
+          name: Shellmason-Setup
           path: |
-            artifacts/PsGuiBuilder-Setup-*.exe
-            artifacts/PsGuiBuilder-Setup-*.exe.sha256
+            artifacts/Shellmason-Setup-*.exe
+            artifacts/Shellmason-Setup-*.exe.sha256
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -60,18 +60,30 @@ jobs:
             $pushed = $env:GITHUB_REF.Substring("refs/tags/".Length)
             if ($pushed -ne $tag) { throw "Tag $pushed does not match VERSION ($tag)." }
           }
-          $setup = "artifacts/PsGuiBuilder-Setup-$version.exe"
+          $setup = "artifacts/Shellmason-Setup-$version.exe"
           $sum = "$setup.sha256"
-          $notes = "Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
+          $notes = "Shellmason. Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
           $exists = $false
           gh release view $tag --repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -eq 0) { $exists = $true }
           if ($exists) {
             gh release upload $tag $setup $sum --repo $env:GITHUB_REPOSITORY --clobber
           } else {
-            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title $tag --notes $notes
+            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title "Shellmason $tag" --notes $notes --latest
           }
           if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          # A normal published release, not a draft and not a prerelease. It is public when the repository is public.
+          # The app checks this release with no token.
+          $publish = '{"draft":false,"prerelease":false,"make_latest":"true"}'
+          $publish | gh api --method PATCH -H "Accept: application/vnd.github+json" "repos/$env:GITHUB_REPOSITORY/releases/tags/$tag" --input -
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          $view = gh release view $tag --repo $env:GITHUB_REPOSITORY --json isDraft,isPrerelease,assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          if ($view.isDraft) { throw "Release $tag is a draft. Shellmason publishes a normal release." }
+          if ($view.isPrerelease) { throw "Release $tag is a prerelease. Shellmason publishes a normal release." }
+          $setupName = "Shellmason-Setup-$version.exe"
+          $found = @($view.assets | Where-Object { $_.name -eq $setupName })
+          if ($found.Count -lt 1) { throw "Release $tag is missing $setupName." }
 
   linux:
     name: Core tests on Linux

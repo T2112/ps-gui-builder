@@ -13,7 +13,7 @@
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
     <Authors>Thomas Schueler</Authors>
     <Company>Thomas Schueler</Company>
-    <Product>PowerShell GUI Command Builder</Product>
+    <Product>Shellmason</Product>
     <Copyright>Copyright (c) 2026 Thomas Schueler. Personal project, developed on personal time using personal equipment. Not related to any employment.</Copyright>
     <!-- The WPF markup compiler builds a *wpftmp project, so exclude that name too. -->
     <TreatWarningsAsErrors Condition="'$(MSBuildProjectName)' != 'PsGuiBuilder' and !$(MSBuildProjectName.Contains('wpftmp'))">true</TreatWarningsAsErrors>

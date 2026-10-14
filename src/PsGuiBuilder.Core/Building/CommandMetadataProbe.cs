@@ -11,11 +11,20 @@ namespace PsGuiBuilder.Core.Building;
 
 public sealed class CommandProbeResult
 {
-    public CommandProbeResult(CommandDefinition? command, string? error, string? notice)
+    public CommandProbeResult(
+        CommandDefinition? command,
+        string? error,
+        string? notice,
+        string? snapshotJson = null,
+        IReadOnlyList<string>? parameterSets = null,
+        string? parameterSet = null)
     {
         Command = command;
         Error = error;
         Notice = notice;
+        SnapshotJson = snapshotJson;
+        ParameterSets = parameterSets ?? Array.Empty<string>();
+        ParameterSet = parameterSet;
     }
 
     public CommandDefinition? Command { get; }
@@ -23,13 +32,22 @@ public sealed class CommandProbeResult
     public string? Error { get; }
 
     public string? Notice { get; }
+
+    public string? SnapshotJson { get; }
+
+    public IReadOnlyList<string> ParameterSets { get; }
+
+    public string? ParameterSet { get; }
 }
 
 public sealed partial class CommandMetadataProbe
 {
     public const string CommandEnvironmentVariable = "PSGUIBUILDER_COMMAND";
 
-    public async Task<CommandProbeResult> LookupAsync(string name, CancellationToken cancellationToken)
+    public Task<CommandProbeResult> LookupAsync(string name, CancellationToken cancellationToken) =>
+        LookupAsync(name, PowerShellEdition.PowerShell7, cancellationToken);
+
+    public async Task<CommandProbeResult> LookupAsync(string name, PowerShellEdition edition, CancellationToken cancellationToken)
     {
         if (!CommandName().IsMatch(name ?? ""))
         {
@@ -39,9 +57,9 @@ public sealed partial class CommandMetadataProbe
                 null);
         }
 
-        var resolution = PowerShellLocator.Resolve(PowerShellEdition.PowerShell7);
+        var resolution = PowerShellLocator.Resolve(edition);
         if (resolution.Error is not null || resolution.Shell is null)
-            return new CommandProbeResult(null, resolution.Error ?? "PowerShell 7 (pwsh) was not found.", null);
+            return new CommandProbeResult(null, resolution.Error ?? "PowerShell was not found.", null);
 
         var encoded = PowerShellCommandEncoding.ToEncodedCommand(ProbeScript);
         var startInfo = new ProcessStartInfo
@@ -91,7 +109,8 @@ public sealed partial class CommandMetadataProbe
 
         try
         {
-            return new CommandProbeResult(CommandMetadataMapper.FromSnapshot(output), null, resolution.Notice);
+            var view = CommandMetadataMapper.Read(output, shell: edition);
+            return new CommandProbeResult(view.Command, null, resolution.Notice, output.Trim(), view.ParameterSets, view.ParameterSet);
         }
         catch (ArgumentException ex)
         {
@@ -114,19 +133,36 @@ public sealed partial class CommandMetadataProbe
         }
     }
 
-    [GeneratedRegex(@"^(?:[A-Za-z][A-Za-z0-9.]*\\)?[A-Za-z][A-Za-z0-9]*-[A-Za-z][A-Za-z0-9]*$")]
+    [GeneratedRegex(@"^(?:[A-Za-z][A-Za-z0-9._-]*\\)?[A-Za-z][A-Za-z0-9]*-[A-Za-z][A-Za-z0-9]*$")]
     private static partial Regex CommandName();
 
     internal const string ProbeScript = """
         $ErrorActionPreference = 'Stop'
         $ProgressPreference = 'SilentlyContinue'
+        $ConfirmPreference = 'None'
         $requested = $env:PSGUIBUILDER_COMMAND
         if ([string]::IsNullOrWhiteSpace($requested)) { throw 'PSGUIBUILDER_COMMAND is required.' }
         $command = Get-Command -Name $requested
+        $synopsis = ''
+        try {
+          $help = Get-Help -Name $command.Name -ErrorAction SilentlyContinue
+          if ($null -ne $help -and $null -ne $help.Synopsis) {
+            $synopsis = ([string]$help.Synopsis).Trim()
+          }
+        } catch {
+          $synopsis = ''
+        }
         $common = @(
           'Verbose','Debug','ErrorAction','ErrorVariable','WarningAction','WarningVariable',
           'InformationAction','InformationVariable','OutVariable','OutBuffer','PipelineVariable','ProgressAction'
         )
+        $setRows = New-Object System.Collections.Generic.List[object]
+        foreach ($set in $command.ParameterSets) {
+          $setRows.Add([pscustomobject]@{
+            name = [string]$set.Name
+            isDefault = [bool]$set.IsDefault
+          }) | Out-Null
+        }
         function Get-Kind([type]$type) {
           if ($null -eq $type) { return 'string' }
           if ($type.IsGenericType -and $type.GetGenericTypeDefinition().FullName -eq 'System.Nullable`1') {
@@ -166,18 +202,38 @@ public sealed partial class CommandMetadataProbe
             $choiceNames = [enum]::GetNames($enumType)
             if ($parameter.ParameterType.IsArray) { $kind = 'array' } else { $kind = 'choice' }
           }
+          foreach ($attribute in $parameter.Attributes) {
+            if ($attribute -is [System.Management.Automation.ValidateSetAttribute]) {
+              $valid = @($attribute.ValidValues)
+              if ($null -eq $choiceNames) { $choiceNames = $valid } else { $choiceNames = @($choiceNames) + $valid }
+              if ($kind -ne 'array' -and $kind -ne 'switch') { $kind = 'choice' }
+            }
+          }
+          $setNames = New-Object System.Collections.Generic.List[string]
+          $mandatoryNames = New-Object System.Collections.Generic.List[string]
+          foreach ($set in $command.ParameterSets) {
+            foreach ($setParameter in $set.Parameters) {
+              if ($setParameter.Name -ne $parameter.Name) { continue }
+              $setNames.Add([string]$set.Name) | Out-Null
+              if ($setParameter.IsMandatory) { $mandatoryNames.Add([string]$set.Name) | Out-Null }
+            }
+          }
           $rows.Add([pscustomobject]@{
             name = $parameter.Name
             kind = $kind
             mandatory = [bool]$mandatory
             choices = $choiceNames
+            sets = $setNames
+            mandatorySets = $mandatoryNames
           }) | Out-Null
         }
         $moduleName = $command.ModuleName
         [pscustomobject]@{
           name = $command.Name
           module = $moduleName
+          synopsis = $synopsis
+          parameterSets = $setRows
           parameters = $rows
-        } | ConvertTo-Json -Depth 5 -Compress
+        } | ConvertTo-Json -Depth 6 -Compress
         """;
 }

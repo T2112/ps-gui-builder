@@ -8,9 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using PsGuiBuilder.Core.Building;
 using PsGuiBuilder.Core.CommandTree;
-using PsGuiBuilder.Execution;
 using PsGuiBuilder.ViewModels;
 
 namespace PsGuiBuilder;
@@ -18,6 +16,8 @@ namespace PsGuiBuilder;
 public partial class MainWindow : Window
 {
     private MainViewModel? _viewModel;
+    private AppUpdateController? _updates;
+    private bool _launchCheckStarted;
 
     public string LoadedTreePath { get; set; } = "";
 
@@ -25,7 +25,27 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContextChanged += (_, _) => AttachOutput();
+        Loaded += OnLoaded;
     }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_launchCheckStarted)
+            return;
+
+        _launchCheckStarted = true;
+        _updates ??= new AppUpdateController(this);
+        await _updates.CheckOnLaunchAsync();
+    }
+
+    private async void CheckForUpdates(object sender, RoutedEventArgs e)
+    {
+        _updates ??= new AppUpdateController(this);
+        await _updates.CheckAsync(manual: true);
+    }
+
+    private void ShowAbout(object sender, RoutedEventArgs e) =>
+        AppUpdateController.ShowAbout(this);
 
     protected override void OnClosing(CancelEventArgs e)
     {
@@ -84,7 +104,7 @@ public partial class MainWindow : Window
 
             if (!File.Exists(userFile))
             {
-                ShowTreeMessage("There is no personal command tree in %APPDATA%\\PsGuiBuilder yet. This window is already using the default commands. After that file exists, Load new default commands adds missing entries there and leaves your edits alone.");
+                ShowTreeMessage("There is no personal command tree in %APPDATA%\\Shellmason yet. This window is already using the default commands. After that file exists, Load new default commands adds missing entries there and leaves your edits alone.");
                 return;
             }
 
@@ -110,7 +130,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, ex.Message, ProductName.Name, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -118,9 +138,9 @@ public partial class MainWindow : Window
     {
         var tree = CommandTreeLoader.LoadFile(path);
         OutputBox.Document.Blocks.Clear();
-        DataContext = new MainViewModel(tree, new CommandExecutionService(), new CommandMetadataProbe(), new SignInDialog());
+        DataContext = MainViewModel.CreateDefault(tree);
     }
 
     private void ShowTreeMessage(string message) =>
-        MessageBox.Show(this, message, "PowerShell GUI Command Builder", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, message, ProductName.Name, MessageBoxButton.OK, MessageBoxImage.Information);
 }

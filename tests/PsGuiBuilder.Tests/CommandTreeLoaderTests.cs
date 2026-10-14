@@ -14,8 +14,8 @@ public class CommandTreeLoaderTests
     {
         var tree = CommandTreeLoader.LoadFile(Repo.CommandTreePath());
 
-        Assert.Equal("0.2", tree.Version);
-        Assert.Equal(15, tree.Root.Children.Count);
+        Assert.Equal("0.3", tree.Version);
+        Assert.Equal(19, tree.Root.Children.Count);
         Assert.Contains(tree.Root.Children, child => child.Name == "Exchange Online");
 
         var exchange = tree.Root.Children.Single(child => child.Name == "Exchange Online");
