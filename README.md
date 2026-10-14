@@ -34,7 +34,7 @@ The setup program shows the LICENSE, installs a new copy to `C:\Program Files\Sh
 
 The Program Files copy of `command-tree.json` is the default. The first launch copies it to `%APPDATA%\Shellmason\command-tree.json` when that file is not already there, and uses that file from then on. If `%APPDATA%\PsGuiBuilder` already has JSON files, the first launch copies the ones that are not in the Shellmason folder yet, including `command-tree.json`, and leaves the old folder in place. Edit the Shellmason copy. An upgrade replaces the Program Files default and does not overwrite the AppData file. **Load new default commands** adds commands that are in the new default and missing from your AppData copy. It leaves entries you already have, including edits, as they are. Delete the AppData file to seed a new copy from the upgraded default. `--tree path\to\command-tree.json` overrides both. A dev build does not create the AppData file unless it is already there.
 
-New releases stay on the private GitHub Release. Download the setup program yourself and run it. The app does not check for updates.
+On launch, and from Help > Check for updates, Shellmason asks `https://api.github.com/repos/T2112/ps-gui-builder/releases/latest` with no token. A newer published release offers to download `Shellmason-Setup-<version>.exe`, check its size and checksum, and run it. Later asks again next time. Skip this version stays quiet until a newer release. A copy started from source only points at the release page.
 
 Uninstall leaves the AppData command tree in place.
 
@@ -69,7 +69,7 @@ Favorites / Common is the curated `command-tree.json`. Installed commands lists 
 
 If a command needs a module that is not installed, Shellmason says what it will install and waits for Yes. Gallery modules use `Install-Module -Scope CurrentUser`, including the NuGet provider and a temporary trust of PSGallery. RSAT modules such as ActiveDirectory use `Add-WindowsCapability` through the existing administrator prompt. Nothing is installed without that Yes.
 
-GitHub Actions builds, tests, and creates the installer on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. A manual run from `main`, or a `v*` tag, publishes a private GitHub Release `v<VERSION>` with `Shellmason-Setup-<version>.exe` and its `.sha256`. The repository stays private.
+GitHub Actions builds, tests, and creates the installer on `windows-latest` for pull requests and for pushes to `main`. A second job runs the core tests on Linux. A manual run from `main`, or a `v*` tag, publishes a normal GitHub Release `v<VERSION>` (not a draft and not a prerelease) with `Shellmason-Setup-<version>.exe` and its `.sha256`. That release is public when the repository is public. Pull requests do not publish a release.
 
 ## Status
 

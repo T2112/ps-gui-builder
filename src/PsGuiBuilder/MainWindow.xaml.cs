@@ -16,6 +16,8 @@ namespace PsGuiBuilder;
 public partial class MainWindow : Window
 {
     private MainViewModel? _viewModel;
+    private AppUpdateController? _updates;
+    private bool _launchCheckStarted;
 
     public string LoadedTreePath { get; set; } = "";
 
@@ -23,7 +25,27 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContextChanged += (_, _) => AttachOutput();
+        Loaded += OnLoaded;
     }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_launchCheckStarted)
+            return;
+
+        _launchCheckStarted = true;
+        _updates ??= new AppUpdateController(this);
+        await _updates.CheckOnLaunchAsync();
+    }
+
+    private async void CheckForUpdates(object sender, RoutedEventArgs e)
+    {
+        _updates ??= new AppUpdateController(this);
+        await _updates.CheckAsync(manual: true);
+    }
+
+    private void ShowAbout(object sender, RoutedEventArgs e) =>
+        AppUpdateController.ShowAbout(this);
 
     protected override void OnClosing(CancelEventArgs e)
     {

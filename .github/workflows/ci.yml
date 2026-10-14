@@ -69,9 +69,21 @@ jobs:
           if ($exists) {
             gh release upload $tag $setup $sum --repo $env:GITHUB_REPOSITORY --clobber
           } else {
-            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title $tag --notes $notes
+            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title "Shellmason $tag" --notes $notes --latest
           }
           if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          # A normal published release, not a draft and not a prerelease. It is public when the repository is public.
+          # The app checks this release with no token.
+          $publish = '{"draft":false,"prerelease":false,"make_latest":"true"}'
+          $publish | gh api --method PATCH -H "Accept: application/vnd.github+json" "repos/$env:GITHUB_REPOSITORY/releases/tags/$tag" --input -
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          $view = gh release view $tag --repo $env:GITHUB_REPOSITORY --json isDraft,isPrerelease,assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+          if ($view.isDraft) { throw "Release $tag is a draft. Shellmason publishes a normal release." }
+          if ($view.isPrerelease) { throw "Release $tag is a prerelease. Shellmason publishes a normal release." }
+          $setupName = "Shellmason-Setup-$version.exe"
+          $found = @($view.assets | Where-Object { $_.name -eq $setupName })
+          if ($found.Count -lt 1) { throw "Release $tag is missing $setupName." }
 
   linux:
     name: Core tests on Linux

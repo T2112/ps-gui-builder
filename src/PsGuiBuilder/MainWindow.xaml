@@ -136,6 +136,12 @@
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="0,0,0,14">
+      <Menu DockPanel.Dock="Right" Background="Transparent" VerticalAlignment="Top">
+        <MenuItem Header="_Help">
+          <MenuItem Header="Check for _updates" Click="CheckForUpdates" />
+          <MenuItem Header="_About" Click="ShowAbout" />
+        </MenuItem>
+      </Menu>
       <TextBlock DockPanel.Dock="Right"
                  Text="Personal project · Thomas Schueler"
                  VerticalAlignment="Bottom"
