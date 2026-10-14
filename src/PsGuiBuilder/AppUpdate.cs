@@ -220,7 +220,7 @@ public static class UpdatePrompt
         var choice = UpdateChoice.Later;
         var notes = new TextBox
         {
-            Text = string.IsNullOrWhiteSpace(status.Notes) ? "No release notes were published." : status.Notes,
+            Text = Changelog.ForPrompt(status.Notes, status.Latest),
             IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,

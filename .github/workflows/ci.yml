@@ -62,14 +62,35 @@ jobs:
           }
           $setup = "artifacts/Shellmason-Setup-$version.exe"
           $sum = "$setup.sha256"
-          $notes = "Shellmason. Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $lines = $changelog -split "\r?\n"
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^##[ \t]+\[?v?(?<version>\d+(?:\.\d+)*)\]?(?:[ \t].*)?$' -and $Matches.version -eq $version) {
+              $start = $i
+              break
+            }
+          }
+          if ($start -lt 0) { throw "CHANGELOG.md has no section for $version. The release was not published." }
+          $end = $lines.Count
+          for ($i = $start + 1; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^##[ \t]+\S') { $end = $i; break }
+          }
+          $section = (($lines[$start..($end - 1)] -join "`n").Trim())
+          if ([string]::IsNullOrWhiteSpace($section)) { throw "CHANGELOG.md has no section for $version. The release was not published." }
+          $ownership = "Shellmason. Personal project by Thomas Schueler. Developed on personal time using personal equipment. Not related to any employment."
+          $notes = $section + "`n`n" + $ownership
+          $notesFile = Join-Path $env:RUNNER_TEMP "shellmason-release-notes.md"
+          [System.IO.File]::WriteAllText($notesFile, $notes)
           $exists = $false
           gh release view $tag --repo $env:GITHUB_REPOSITORY
           if ($LASTEXITCODE -eq 0) { $exists = $true }
           if ($exists) {
             gh release upload $tag $setup $sum --repo $env:GITHUB_REPOSITORY --clobber
+            if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+            gh release edit $tag --repo $env:GITHUB_REPOSITORY --notes-file $notesFile
           } else {
-            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title "Shellmason $tag" --notes $notes --latest
+            gh release create $tag $setup $sum --repo $env:GITHUB_REPOSITORY --title "Shellmason $tag" --notes-file $notesFile --latest
           }
           if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
           # A normal published release, not a draft and not a prerelease. It is public when the repository is public.
