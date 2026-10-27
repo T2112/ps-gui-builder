@@ -27,7 +27,8 @@ The `command-tree.json` drives the entire cascading menus and parameter forms. A
 - `command-tree.json` — the Favorites / Common menu and parameter source of truth. An installed build copies that default into `%APPDATA%\Shellmason\command-tree.json` on first launch and loads the user copy after that, so an upgrade can replace the Program Files default without touching edits. JSON files already in `%APPDATA%\PsGuiBuilder` are copied into the Shellmason folder when the new file is missing. The old folder is left in place. **Load new default commands** adds entries that are in the new default and missing from the AppData file. It does not replace a category, branch, or command you already have, including ones you edited. `--tree` still wins. `PsGuiBuilder.installed` beside the executable marks an installed build; a dev build does not seed the user file. The installer id is unchanged, so a Shellmason setup upgrades an existing PsGuiBuilder install. New installs use `C:\Program Files\Shellmason`. The setup file is `Shellmason-Setup-<version>.exe`.
 - `src/PsGuiBuilder/Assets/PsGuiBuilder.ico` — the app icon at 16, 24, 32, 48, 64, 128, and 256 pixels. The executable, the window, the installer, the shortcuts, and Add/Remove Programs use it.
 - `VERSION` — the app and installer version, `major.minor.patch`.
-- `installer/` — Inno Setup script and the self-contained win-x64 publish script.
+- `installer/` — Inno Setup script and the self-contained win-x64 publish script. The setup shows OWNERSHIP.md, then the standard MIT LICENSE.
+- `scripts/New-ReleaseNotes.ps1` — reads the matching `CHANGELOG.md` section for the version being published and appends the personal-ownership note. The release workflow uses that text as the GitHub Release body and stops without publishing when the section is missing.
 
 ## Elevated execution
 
@@ -74,7 +75,7 @@ Before a command runs, a module that is not an inbox Windows module is checked w
 
 ## Ownership Logging
 
-- README and LICENSE explicitly state personal development.
+- README, OWNERSHIP.md, and the copyright line in LICENSE state personal development. LICENSE is the standard MIT text so GitHub can identify it. The personal-development addendum that used to follow the MIT text is kept in full in OWNERSHIP.md. The installer shows OWNERSHIP.md before the MIT license page.
 - All source files will include a header comment:
   ```
   // Personal project by Thomas Schueler.
