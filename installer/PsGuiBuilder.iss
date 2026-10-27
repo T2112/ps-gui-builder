@@ -9,7 +9,7 @@
   #error PublishDir must be the self-contained win-x64 publish folder.
 #endif
 #ifndef RepoRoot
-  #error RepoRoot must be the repository root, so the installer can show LICENSE.
+  #error RepoRoot must be the repository root, so the installer can show OWNERSHIP.md and LICENSE.
 #endif
 
 #define AppName "Shellmason"
@@ -27,6 +27,7 @@ AppCopyright={#Copyright}
 DefaultDirName={autopf}\Shellmason
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+InfoBeforeFile={#RepoRoot}\OWNERSHIP.md
 LicenseFile={#RepoRoot}\LICENSE
 SetupIconFile={#RepoRoot}\src\PsGuiBuilder\Assets\PsGuiBuilder.ico
 OutputDir={#RepoRoot}\artifacts

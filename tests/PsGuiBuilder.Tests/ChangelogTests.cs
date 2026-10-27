@@ -55,9 +55,15 @@ public class ChangelogTests
     [Fact]
     public void Release_workflow_fails_when_the_changelog_section_is_missing()
     {
-        var workflow = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Repo.CommandTreePath())!, ".github", "workflows", "ci.yml"));
+        var root = Path.GetDirectoryName(Repo.CommandTreePath())!;
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+        var script = File.ReadAllText(Path.Combine(root, "scripts", "New-ReleaseNotes.ps1"));
+
+        Assert.Contains("./scripts/New-ReleaseNotes.ps1", workflow, StringComparison.Ordinal);
         Assert.Contains("CHANGELOG.md has no section for $version. The release was not published.", workflow, StringComparison.Ordinal);
-        Assert.Contains(Changelog.OwnershipNote, workflow, StringComparison.Ordinal);
+        Assert.Contains("CHANGELOG.md has no section for $version. The release was not published.", script, StringComparison.Ordinal);
+        Assert.Contains(Changelog.OwnershipNote, script, StringComparison.Ordinal);
         Assert.Contains("--notes-file $notesFile", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("gh release", script, StringComparison.Ordinal);
     }
 }

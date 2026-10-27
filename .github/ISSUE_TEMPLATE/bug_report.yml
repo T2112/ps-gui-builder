@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in Shellmason did not do what you expected.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Shellmason is a personal project. For a security vulnerability, use the security policy instead of this form. Do not include passwords, tokens, or text from a credential dialog.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Shellmason
+        2. Choose I Want To, then Then
+        3. Run
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Shellmason version
+      description: Help, About, or the installer name Shellmason-Setup-<version>.exe.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: false
+  - type: dropdown
+    id: shell
+    attributes:
+      label: PowerShell host
+      options:
+        - PowerShell 7 (pwsh)
+        - Windows PowerShell 5.1
+        - Run inside this app
+        - Not sure
+    validations:
+      required: false
+  - type: textarea
+    id: output
+    attributes:
+      label: Output pane
+      description: Paste the relevant text from the output pane. Leave out secrets.
+    validations:
+      required: false

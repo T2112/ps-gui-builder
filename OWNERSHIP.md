@@ -14,4 +14,13 @@ Date started: 2026-10-12
 
 Author: Thomas Schueler (thomas@schuelertech.com / GitHub: T2112)
 
-This file and the accompanying README / LICENSE serve as contemporaneous documentation of the personal nature of the work.
+This file and the accompanying README / LICENSE serve as contemporaneous documentation of the personal nature of the work. The paragraphs that were appended to LICENSE are in [Statement moved from LICENSE](#statement-moved-from-license), word for word.
+
+## Statement moved from LICENSE
+
+This text followed the MIT permission notice in `LICENSE`. It is reproduced here in full so the license file can stay the standard MIT text, which is what GitHub uses to identify the license. It does not change the MIT terms.
+
+Personal project developed by Thomas Schueler on personal time using personal equipment.
+Not related to employment. No employer resources were used. This is a personal side project.
+Version 0.2.0 was built the same way: personal time, personal equipment, no employer resources.
+Version 0.3.0 was built the same way: personal time, personal equipment, no employer resources.
